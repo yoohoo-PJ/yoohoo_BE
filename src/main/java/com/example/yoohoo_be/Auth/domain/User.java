@@ -4,10 +4,14 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -15,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "users") // DB 예약어 충돌 방지를 위해 users로 설정된 점 아주 좋습니다.
-public class User extends TimeStamped implements UserDetails {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,16 +37,36 @@ public class User extends TimeStamped implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    // 1. 방금 논의했던 사서 식별 코드 필수 추가
+    // 사서 식별 코드
     @Column(name = "librarian_code", nullable = false, unique = true)
     private String librarianCode;
 
-    // 2. 권한 필드 (스프링 시큐리티를 위해 필수)
+    // 권한 필드 (스프링 시큐리티를 위해 필수)
     @Column(name = "user_role", nullable = false)
     @Enumerated(EnumType.STRING)
     private UserRole userRole;
 
-    // 3. 생성자 내부 로직 완성 및 권한 고정
+    // [추가] 비밀번호 재설정 코드 - 추후 "비밀번호 찾기" 기능 구현 시 사용, 가입 시엔 null
+    @Setter
+    @Column(name = "reset_code")
+    private String resetCode;
+
+    // [추가] 리프레시 토큰 - 추후 Access Token 재발급 기능 구현 시 사용, 가입 시엔 null
+    @Setter
+    @Column(name = "refresh_token")
+    private String refreshToken;
+
+    // [추가] 생성일시 - Hibernate가 INSERT 시 자동으로 채워줌
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    // [추가] 수정일시 - Hibernate가 UPDATE 시 자동으로 갱신함
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // 생성자 내부 로직 완성 및 권한 고정
     @Builder
     public User(String username, String nickname, String password, String email, String librarianCode) {
         this.username = username;
@@ -50,7 +74,7 @@ public class User extends TimeStamped implements UserDetails {
         this.password = password;
         this.email = email;
         this.librarianCode = librarianCode;
-        this.userRole = UserRole.LIBRARIAN; // 관리자 전용 앱이므로 사서 권한으로 강제 고정
+        this.userRole = UserRole.ROLE_LIBRARIAN; // 관리자 전용 앱이므로 사서 권한으로 강제 고정
     }
 
     // --- 아래부터는 UserDetails 인터페이스의 필수 구현 메서드입니다 ---
