@@ -1,0 +1,44 @@
+package com.example.yoohoo_be.checklists.dto;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Getter
+@NoArgsConstructor
+public class BookCheckSaveRequestDto {
+
+    @NotNull(message = "도서 ID는 필수 항목입니다.")
+    private Long bookId; // 도서 고유 ID
+
+    @NotBlank(message = "사서/담당자 코드는 필수 항목입니다.")
+    private String librarianCode; // 담당 사서 코드
+
+    @NotBlank(message = "점검 날짜(YYYY-MM-DD)는 필수 항목입니다.")
+    private String checkedDate; // 점검 날짜 (YYYY-MM-DD)
+
+    @NotNull(message = "총 점수는 필수 항목입니다.")
+    private Integer totalScore; // 현재 설정된 점검리스트 총 점수
+
+    @Valid
+    @NotNull(message = "상세 점검 항목 리스트는 필수 항목입니다.")
+    private List<CheckItemResultDto> items; // [수정됨] checkResults -> items
+
+    @Getter
+    @NoArgsConstructor
+    public static class CheckItemResultDto {
+
+        @NotNull(message = "점검 항목 ID는 필수 항목입니다.")
+        private Long checkItemId; // 점검 항목 ID
+
+        @NotNull(message = "통과 여부는 필수 항목입니다.")
+        private Boolean isPassed; // 통과 여부
+
+        // [수정됨] itemScore 필드 제거 (명세서 요청 Body에 없음)
+        private String note; // 특이사항 메모 (비필수)
+    }
+}
