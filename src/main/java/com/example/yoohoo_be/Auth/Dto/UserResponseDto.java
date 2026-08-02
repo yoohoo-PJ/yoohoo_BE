@@ -29,9 +29,7 @@ public class UserResponseDto {
         this.id = user.getId();
         this.email = user.getEmail();
         this.password = user.getPassword();
-        // 현재 엔티티에는 "실명(name)"과 "닉네임(nickname)"이 별도로 존재하지 않고
-        // nickname 필드 하나뿐이라 우선 동일한 값으로 채웠습니다. (아래 채팅 설명 참고)
-        this.name = user.getNickname();
+        this.name = user.getName();
         this.nickname = user.getNickname();
         this.librarianCode = user.getLibrarianCode();
         this.resetCode = user.getResetCode();

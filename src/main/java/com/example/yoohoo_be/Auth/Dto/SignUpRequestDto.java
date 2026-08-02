@@ -8,7 +8,7 @@ import lombok.Setter;
 
 /**
  * API 명세서 Request Body 형태에 맞춘 회원가입 요청 DTO
- * { "id": "...", "password": "...", "name": "...", "email": "...", "librarianCode": "..." }
+ * { "id": "...", "password": "...", "name": "...", "nickname": "...", "email": "...", "librarianCode": "..." }
  */
 @Getter
 @Setter
@@ -25,6 +25,10 @@ public class SignUpRequestDto {
     @NotBlank(message = "이름은 필수 입력 값입니다.")
     @Size(min = 2, max = 30, message = "이름은 2자에서 30자까지 입력해주세요.")
     private String name;
+
+    @NotBlank(message = "닉네임은 필수 입력 값입니다.")
+    @Size(min = 2, max = 30, message = "닉네임은 2자에서 30자까지 입력해주세요.")
+    private String nickname;
 
     @NotBlank(message = "이메일은 필수 입력 값입니다.")
     @Email(message = "유효한 이메일 형식이 아닙니다.")

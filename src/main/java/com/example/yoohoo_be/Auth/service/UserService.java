@@ -29,13 +29,12 @@ public class UserService {
             throw new IllegalArgumentException("이미 등록된 사서번호입니다.");
         }
 
-        // [수정] 기존 코드는 5번째 인자로 UserRole.ROLE_LIBRARIAN.name()("ROLE_LIBRARIAN" 문자열)을
-        // 넘기고 있었는데, User 생성자의 5번째 인자는 librarianCode(사서번호) 자리입니다.
-        // 즉 모든 회원의 사서번호가 "ROLE_LIBRARIAN"이라는 동일한 문자열로 잘못 저장되는 버그였고,
-        // unique 제약조건 때문에 두 번째 회원가입부터는 무조건 실패했을 것입니다.
+        // [수정] name과 nickname을 각각의 값으로 저장 (기존에는 nickname 자리에 name을 넣거나,
+        // User 엔티티에 name 컬럼이 없어 name 값 자체가 저장되지 못하던 문제가 있었음)
         User newUser = new User(
                 signUpRequestDto.getId(),
                 signUpRequestDto.getName(),
+                signUpRequestDto.getNickname(),
                 passwordEncoder.encode(signUpRequestDto.getPassword()),
                 signUpRequestDto.getEmail(),
                 signUpRequestDto.getLibrarianCode()
