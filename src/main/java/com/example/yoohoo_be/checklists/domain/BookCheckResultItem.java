@@ -21,8 +21,9 @@ public class BookCheckResultItem {
     @JoinColumn(name = "result_batch_id", nullable = false)
     private BookCheckBatch bookCheckBatch; // 소속된 점검 그룹 (FK)
 
-    @Column(name = "check_item_id", nullable = false)
-    private Long checkItemId; // 점검 항목 ID (예: 표지 찢어짐 항목 PK)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "check_item_id", nullable = false)
+    private CheckItem checkItem; // 점검 항목 (예: 표지 찢어짐 항목)
 
     @Column(name = "is_passed", nullable = false)
     private Boolean isPassed; // 양호 여부 (true: 정상, false: 파손/불량)
@@ -34,19 +35,17 @@ public class BookCheckResultItem {
     private String note; // 특이사항 메모 (선택적)
 
     @Builder
-    public BookCheckResultItem(Long checkItemId, Boolean isPassed, Integer itemScore, String note) {
-        this.checkItemId = checkItemId;
+    public BookCheckResultItem(CheckItem checkItem, Boolean isPassed, Integer itemScore, String note) {
+        this.checkItem = checkItem;
         this.isPassed = isPassed;
         this.itemScore = itemScore;
         this.note = note;
     }
 
-    // BookCheckBatch 연관관계 설정을 위한 setter (패키지-프라이빗 또는 protected 권장)
     protected void setBookCheckBatch(BookCheckBatch bookCheckBatch) {
         this.bookCheckBatch = bookCheckBatch;
     }
 
-    // 항목별 판정 결과 및 메모 수정 메서드 (PUT API 호출 시 사용)
     public void updateItemResult(Boolean isPassed, Integer itemScore, String note) {
         this.isPassed = isPassed;
         this.itemScore = itemScore;
