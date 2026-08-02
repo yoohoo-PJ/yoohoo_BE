@@ -3,10 +3,12 @@ package com.example.yoohoo_be.checklists.service;
 import com.example.yoohoo_be.checklists.domain.Book;
 import com.example.yoohoo_be.checklists.domain.BookCheckBatch;
 import com.example.yoohoo_be.checklists.domain.BookCheckResultItem;
+import com.example.yoohoo_be.checklists.domain.CheckItem;
 import com.example.yoohoo_be.checklists.dto.BookCheckHistoryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookCheckSaveRequestDto;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
 import com.example.yoohoo_be.checklists.repository.BookRepository;
+import com.example.yoohoo_be.checklists.repository.CheckItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class BookCheckService {
 
     private final BookRepository bookRepository;
     private final BookCheckBatchRepository bookCheckBatchRepository;
+    private final CheckItemRepository checkItemRepository;
 
     /**
      * 1. 점검 결과 최초 등록 (POST)
@@ -30,17 +33,21 @@ public class BookCheckService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 도서를 찾을 수 없습니다. id=" + requestDto.getBookId()));
 
         BookCheckBatch batch = BookCheckBatch.builder()
-                .bookId(requestDto.getBookId())
+                .book(book) // bookId(Long) -> book(Book 연관관계)
                 .librarianCode(requestDto.getLibrarianCode())
                 .checkedDate(requestDto.getCheckedDate())
                 .totalScore(requestDto.getTotalScore())
                 .build();
 
-        // [수정됨] requestDto.getItems() 로 접근
-        for (BookCheckSaveRequestDto.CheckItemResultDto itemDto : requestDto.getItems()) {
+        for (BookCheckSaveRequestDto.CheckItemResultDto itemDto : requestDto.getCheckResults()) {
+            CheckItem checkItem = checkItemRepository.findById(itemDto.getCheckItemId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "해당 점검 항목을 찾을 수 없습니다. id=" + itemDto.getCheckItemId()));
+
             BookCheckResultItem item = BookCheckResultItem.builder()
-                    .checkItemId(itemDto.getCheckItemId())
+                    .checkItem(checkItem)
                     .isPassed(itemDto.getIsPassed())
+                    .itemScore(itemDto.getItemScore())
                     .note(itemDto.getNote())
                     .build();
             batch.addItem(item);
@@ -56,7 +63,7 @@ public class BookCheckService {
     }
 
     /**
-     * 2. 특정 도서의 점검 이력 및 상세 조회 (GET)
+     * 2. 특정 도서의 점검 이력(전체 리스트) 조회 (GET)
      */
     @Transactional(readOnly = true)
     public List<BookCheckHistoryResponseDto> getBookCheckHistory(Long bookId) {
@@ -65,10 +72,10 @@ public class BookCheckService {
         return batches.stream().map(batch -> {
             List<BookCheckHistoryResponseDto.CheckItemDetailDto> itemDtos = batch.getItems().stream()
                     .map(item -> BookCheckHistoryResponseDto.CheckItemDetailDto.builder()
-                            .checkItemId(item.getCheckItemId())
-                            .title("점검 항목 #" + item.getCheckItemId())
-                            .category("BOOK_CONDITION") // [추가됨] 명세서 규격 일치
-                            .description("도서 마모 및 오염 상태 세부 점검") // [추가됨] 명세서 규격 일치
+                            .checkItemId(item.getCheckItem().getId())
+                            .title(item.getCheckItem().getTitle())
+                            .category(item.getCheckItem().getCategory())
+                            .description(item.getCheckItem().getDescription())
                             .isPassed(item.getIsPassed())
                             .note(item.getNote())
                             .build())
@@ -76,7 +83,7 @@ public class BookCheckService {
 
             return BookCheckHistoryResponseDto.builder()
                     .resultBatchId(batch.getId())
-                    .bookId(batch.getBookId())
+                    .bookId(batch.getBook().getId())
                     .librarianCode(batch.getLibrarianCode())
                     .checkedDate(batch.getCheckedDate())
                     .totalScore(batch.getTotalScore())
@@ -95,14 +102,13 @@ public class BookCheckService {
 
         batch.updateBatch(requestDto.getLibrarianCode(), requestDto.getTotalScore());
 
-        // [수정됨] requestDto.getItems() 로 변경
-        for (BookCheckSaveRequestDto.CheckItemResultDto itemDto : requestDto.getItems()) {
+        for (BookCheckSaveRequestDto.CheckItemResultDto itemDto : requestDto.getCheckResults()) {
             batch.getItems().stream()
-                    .filter(item -> item.getCheckItemId().equals(itemDto.getCheckItemId()))
+                    .filter(item -> item.getCheckItem().getId().equals(itemDto.getCheckItemId()))
                     .findFirst()
                     .ifPresent(item -> item.updateItemResult(
                             itemDto.getIsPassed(),
-                            null, // 점수는 총점으로 통합 관리되므로 개별 항목 점수는 null 처리
+                            itemDto.getItemScore(),
                             itemDto.getNote()
                     ));
         }
