@@ -1,7 +1,7 @@
 package com.example.yoohoo_be.Auth.controller;
 
-import com.example.yoohoo_be.Auth.Dto.AuthResponseDto;
 import com.example.yoohoo_be.Auth.Dto.LoginRequestDto;
+import com.example.yoohoo_be.Auth.Dto.LoginResponseDto;
 import com.example.yoohoo_be.Auth.Dto.SignUpRequestDto;
 import com.example.yoohoo_be.Auth.Dto.UserResponseDto;
 import com.example.yoohoo_be.Auth.domain.User;
@@ -15,7 +15,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -61,7 +60,7 @@ public class AuthController {
     }
 
     @PostMapping("login")
-    public ResponseEntity<AuthResponseDto> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequestDto) {
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequestDto loginRequestDto) {
         try {
             // 인증 객체 생성
             // Authentication Manager를 통해서 username, password 기반으로 인증 수행 지시
@@ -73,15 +72,38 @@ public class AuthController {
                     )
             );
             // 결과물 인증 객체 (UserDetails == Principal)
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            // JWT 토큰 생성 (accessToken = jwtToken)
-            String accessToken = jwtUtil.generateToken(userDetails.getUsername());
+            // User 엔티티가 UserDetails를 구현하므로, 응답에 필요한 name/email/nickname/librarianCode를
+            // 꺼내기 위해 User로 캐스팅
+            User user = (User) authentication.getPrincipal();
 
-            return ResponseEntity.ok(new AuthResponseDto(userDetails.getUsername(), accessToken));
+            // JWT 토큰은 계속 생성해서 헤더로 내려줌 (JwtAuthenticationFilter가 이후 요청 인증에 사용)
+            String accessToken = jwtUtil.generateToken(user.getUsername());
+
+            LoginResponseDto responseBody = new LoginResponseDto(
+                    user.getName(),
+                    user.getEmail(),
+                    user.getNickname(),
+                    user.getLibrarianCode()
+            );
+
+            return ResponseEntity.ok()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .body(responseBody);
+
         } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponseDto(null, null));
+            // 명세서 형태: { "message": "...", "error": "Unauthorized", "statusCode": 401 }
+            Map<String, Object> body = new HashMap<>();
+            body.put("message", "잘못된 아이디 혹은 비밀번호를 입력했습니다.");
+            body.put("error", "Unauthorized");
+            body.put("statusCode", HttpStatus.UNAUTHORIZED.value());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new AuthResponseDto(null, null));
+            Map<String, Object> body = new HashMap<>();
+            body.put("message", "서버 오류가 발생했습니다.");
+            body.put("error", "Internal Server Error");
+            body.put("statusCode", HttpStatus.INTERNAL_SERVER_ERROR.value());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
         }
     }
 }

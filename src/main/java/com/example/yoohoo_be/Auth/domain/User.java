@@ -28,6 +28,10 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String username;
 
+    // [추가] 실명 (기존에는 이 필드가 없어서 nickname 값으로 대신 채워 넣던 버그가 있었음)
+    @Column(nullable = false)
+    private String name;
+
     @Column(nullable = false)
     private String nickname;
 
@@ -68,8 +72,9 @@ public class User implements UserDetails {
 
     // 생성자 내부 로직 완성 및 권한 고정
     @Builder
-    public User(String username, String nickname, String password, String email, String librarianCode) {
+    public User(String username, String name, String nickname, String password, String email, String librarianCode) {
         this.username = username;
+        this.name = name;
         this.nickname = nickname;
         this.password = password;
         this.email = email;
