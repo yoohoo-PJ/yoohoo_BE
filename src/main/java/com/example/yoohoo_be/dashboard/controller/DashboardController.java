@@ -30,7 +30,7 @@ public class DashboardController {
     // 도서관 네트워크 거리 조회
     @GetMapping("/libraries/network-distances")
     public ApiResponse<List<NetworkDistanceDto>> getNetworkDistances() {
-        List<NetworkDistanceDto> distances = dashboardService.getRealDistancesFromBuksuwon();
+        List<NetworkDistanceDto> distances = dashboardService.getRealDistancesFromCentral();
         return new ApiResponse<>(true, distances);
     }
 
@@ -53,5 +53,12 @@ public class DashboardController {
     public ResponseEntity<ApiResponse<DashboardCountDto>> getDamagePendingCount() {
         DashboardCountDto response = dashboardService.getDamagePendingCount();
         return ResponseEntity.ok(new ApiResponse<>(true, response));
+    }
+
+    // 이관 검토 대기 수 조회
+    @GetMapping("/transfer-pending/count")
+    public ResponseEntity<ApiResponse<DashboardCountDto>> getTransferPendingCount() {
+        DashboardCountDto data = dashboardService.getTransferPendingCount();
+        return ResponseEntity.ok(new ApiResponse<>(true, data));
     }
 }
