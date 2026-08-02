@@ -80,7 +80,7 @@ public class AuthController {
             String accessToken = jwtUtil.generateToken(user.getUsername());
 
             LoginResponseDto responseBody = new LoginResponseDto(
-                    user.getNickname(), // name (엔티티에 별도 name 필드가 없어 nickname으로 채움)
+                    user.getName(),
                     user.getEmail(),
                     user.getNickname(),
                     user.getLibrarianCode()

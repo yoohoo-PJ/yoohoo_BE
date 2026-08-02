@@ -29,11 +29,11 @@ public class UserService {
             throw new IllegalArgumentException("이미 등록된 사서번호입니다.");
         }
 
-        // [수정] 기존 코드는 nickname 자리에 signUpRequestDto.getName()(실명)을 넣고 있었는데,
-        // 회원가입 요청에 별도 nickname 필드가 없어서 실명을 닉네임으로 대신 저장하던 상태였습니다.
-        // SignUpRequestDto에 nickname 필드를 추가했으므로 이제 실제 닉네임 값을 저장합니다.
+        // [수정] name과 nickname을 각각의 값으로 저장 (기존에는 nickname 자리에 name을 넣거나,
+        // User 엔티티에 name 컬럼이 없어 name 값 자체가 저장되지 못하던 문제가 있었음)
         User newUser = new User(
                 signUpRequestDto.getId(),
+                signUpRequestDto.getName(),
                 signUpRequestDto.getNickname(),
                 passwordEncoder.encode(signUpRequestDto.getPassword()),
                 signUpRequestDto.getEmail(),
