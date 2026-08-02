@@ -25,8 +25,9 @@ public class BookCheckBatch {
     @Column(name = "result_batch_id")
     private Long id; // 점검 그룹 고유 ID (PK)
 
-    @Column(name = "book_id", nullable = false)
-    private Long bookId; // 점검 대상 도서 ID (Book 엔티티의 PK 참조)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "book_id", nullable = false)
+    private Book book; // 점검 대상 도서
 
     @Column(name = "librarian_code", nullable = false, length = 50)
     private String librarianCode; // 점검 수행 사서/담당자 코드
@@ -45,25 +46,22 @@ public class BookCheckBatch {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt; // 수정 일시
 
-    // 부모-자식 관계 설정 (Batch 삭제 시 하위 Item들도 함께 삭제, Cascade 적용)
     @OneToMany(mappedBy = "bookCheckBatch", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookCheckResultItem> items = new ArrayList<>();
 
     @Builder
-    public BookCheckBatch(Long bookId, String librarianCode, String checkedDate, Integer totalScore) {
-        this.bookId = bookId;
+    public BookCheckBatch(Book book, String librarianCode, String checkedDate, Integer totalScore) {
+        this.book = book;
         this.librarianCode = librarianCode;
         this.checkedDate = checkedDate;
         this.totalScore = totalScore;
     }
 
-    // 연관관계 편의 메서드: 하위 점검 항목 추가
     public void addItem(BookCheckResultItem item) {
         this.items.add(item);
         item.setBookCheckBatch(this);
     }
 
-    // 점검 결과 및 점수 수정 메서드 (PUT API 호출 시 사용)
     public void updateBatch(String librarianCode, Integer totalScore) {
         this.librarianCode = librarianCode;
         this.totalScore = totalScore;

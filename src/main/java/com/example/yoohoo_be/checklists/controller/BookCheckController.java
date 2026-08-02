@@ -45,10 +45,12 @@ public class BookCheckController {
     }
 
     /**
-     * 2. 특정 도서의 점검 이력 조회
-     * [GET] /api/checklists/books/{bookId}/results
+     * 2. 특정 도서의 점검 이력(전체 리스트) 조회
+     * [GET] /api/checklists/books/{bookId}/results/history
+     * BookWearStatusController 의 상세(단건) 조회와 경로가 겹쳐서 분리함
+     * (상세 모달: /books/{bookId}/results, 전체 이력: /books/{bookId}/results/history)
      */
-    @GetMapping("/books/{bookId}/results")
+    @GetMapping("/books/{bookId}/results/history")
     public ResponseEntity<Map<String, Object>> getCheckHistory(
             @PathVariable Long bookId) {
 
