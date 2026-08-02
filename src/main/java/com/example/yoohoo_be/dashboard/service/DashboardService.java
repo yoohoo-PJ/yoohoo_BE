@@ -3,12 +3,14 @@ package com.example.yoohoo_be.dashboard.service;
 import com.example.yoohoo_be.dashboard.domain.Library;
 import com.example.yoohoo_be.dashboard.domain.LibraryMonthlyStats;
 import com.example.yoohoo_be.dashboard.domain.RegionalPopulation;
+import com.example.yoohoo_be.dashboard.dto.DashboardCountDto;
 import com.example.yoohoo_be.dashboard.dto.MonthlyLoanDto;
 import com.example.yoohoo_be.dashboard.dto.NetworkDistanceDto;
 import com.example.yoohoo_be.dashboard.dto.RegionalPopulationDto;
 import com.example.yoohoo_be.dashboard.repository.LibraryMonthlyStatsRepository;
 import com.example.yoohoo_be.dashboard.repository.LibraryRepository;
 import com.example.yoohoo_be.dashboard.repository.RegionalPopulationRepository;
+import com.example.yoohoo_be.dashboard.repository.UscoreResultRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +36,7 @@ public class DashboardService {
     private final RegionalPopulationRepository regionalPopulationRepository;
     private final LibraryRepository libraryRepository;
     private final LibraryMonthlyStatsRepository monthlyStatsRepository;
+    private final UscoreResultRepository uscoreResultRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${kakao.rest-api-key}")
@@ -184,5 +187,23 @@ public class DashboardService {
                     .turnoverRate(stat.getTurnoverRate() == null ? 0.0 : stat.getTurnoverRate().doubleValue())
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    // 유휴화 도서 수 조회
+    public DashboardCountDto getIdleBooksCount() {
+        Library origin = libraryRepository.findByLibraryName("북수원도서관")
+                .orElseThrow(() -> new IllegalArgumentException("북수원도서관 정보를 찾을 수 없습니다."));
+
+        long count = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
+        return new DashboardCountDto(count);
+    }
+
+    // 파손 심사 대기 수 조회
+    public DashboardCountDto getDamagePendingCount() {
+        Library origin = libraryRepository.findByLibraryName("북수원도서관")
+                .orElseThrow(() -> new IllegalArgumentException("북수원도서관 정보를 찾을 수 없습니다."));
+
+        long count = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
+        return new DashboardCountDto(count);
     }
 }
