@@ -10,7 +10,7 @@ import java.util.List;
 public class BookCheckHistoryResponseDto {
 
     private Long resultBatchId;  // 점검 제출 그룹 고유 ID
-    private Long bookId;         // 도서 고유 ID
+    private Integer bookId;         // 도서 고유 ID
     private String librarianCode;// 점검 수행 담당자 코드
     private String checkedDate;  // 점검 날짜 (YYYY-MM-DD)
     private Integer totalScore;  // 해당 점검 건의 최종 총 점수

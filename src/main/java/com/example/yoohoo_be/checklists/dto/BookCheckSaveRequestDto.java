@@ -12,8 +12,8 @@ import java.util.List;
 @NoArgsConstructor
 public class BookCheckSaveRequestDto {
 
-    @NotNull(message = "도서 ID는 필수 항목입니다.")
-    private Long bookId; // 도서 고유 ID
+    @NotNull(message = "점검 대상 도서 ID는 필수 항목입니다.")
+    private Integer resultId; // 점검 대상 도서 ID (이전 bookId)
 
     @NotBlank(message = "사서/담당자 코드는 필수 항목입니다.")
     private String librarianCode; // 담당 사서 코드
@@ -27,6 +27,7 @@ public class BookCheckSaveRequestDto {
     // API 명세서 필드명(checkResults)과 일치시킴
     @Valid
     @NotNull(message = "상세 점검 항목 리스트는 필수 항목입니다.")
+    @jakarta.validation.constraints.Size(min = 15, max = 15, message = "점검 항목은 정확히 15개여야 합니다.")
     private List<CheckItemResultDto> checkResults;
 
     @Getter
@@ -40,7 +41,5 @@ public class BookCheckSaveRequestDto {
         private Boolean isPassed; // 통과 여부
 
         private Integer itemScore; // 해당 항목 판정 점수
-
-        private String note; // 특이사항 메모 (비필수)
     }
 }
