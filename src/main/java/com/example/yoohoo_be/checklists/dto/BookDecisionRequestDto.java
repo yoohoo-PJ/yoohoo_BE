@@ -1,6 +1,6 @@
 package com.example.yoohoo_be.checklists.dto;
 
-import com.example.yoohoo_be.checklists.domain.BookStatus;
+import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

@@ -1,15 +1,14 @@
 package com.example.yoohoo_be.checklists.service;
 
-import com.example.yoohoo_be.checklists.domain.Book;
+import com.example.yoohoo_be.dashboard.domain.Book;
 import com.example.yoohoo_be.checklists.domain.BookCheckBatch;
-import com.example.yoohoo_be.checklists.domain.BookStatus;
+import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import com.example.yoohoo_be.checklists.dto.BookCheckCompletedListResponseDto;
-import com.example.yoohoo_be.checklists.dto.BookDecisionRequestDto;
-import com.example.yoohoo_be.checklists.dto.BookDecisionResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookSummaryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookWearStatusDetailResponseDto;
+import com.example.yoohoo_be.common.exception.ResourceNotFoundException;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
-import com.example.yoohoo_be.checklists.repository.BookRepository;
+import com.example.yoohoo_be.dashboard.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,15 +38,18 @@ public class BookWearStatusService {
     /**
      * 2. [마모 처리 현황 - 두 번째 상세 모달 화면] 특정 도서의 마모 상태 점검 상세 결과 조회 (bookId 기준)
      */
-    public BookWearStatusDetailResponseDto getWearStatusDetailByBookId(Long bookId) {
+    public BookWearStatusDetailResponseDto getWearStatusDetailByBookId(Integer bookId) {
         BookCheckBatch batch = bookCheckBatchRepository.findLatestByBookId(bookId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 도서의 점검 내역이 존재하지 않습니다. Book ID: " + bookId));
 
         var bookInfo = BookWearStatusDetailResponseDto.BookInfoDto.builder()
-                .bookId(batch.getBook().getId())
+                .bookId(batch.getBook().getBookId())
                 .title(batch.getBook().getTitle())
                 .author(batch.getBook().getAuthor())
                 .publisher(batch.getBook().getPublisher())
+                .isbn(batch.getBook().getIsbn())
+                .kdcCode(batch.getBook().getKdcCode())
+                .kdcClass(batch.getBook().getKdcClass())
                 .callNumber(batch.getBook().getCallNumber())
                 .coverUrl(batch.getBook().getCoverUrl())
                 .status(batch.getBook().getStatus().name())
@@ -74,24 +76,6 @@ public class BookWearStatusService {
                 .build();
     }
 
-    /**
-     * 3. [추가됨] 폐기/이관/보존 최종 처리 결정 확정
-     * 프론트에서 setBooks 로 React state 만 바꾸던 것을 서버에 영속화하기 위한 API.
-     * 새로고침/재접속/다른 사서 접속 시에도 결정이 유지되도록 DB 에 저장한다.
-     */
-    @Transactional
-    public BookDecisionResponseDto decideBookDisposition(Long bookId, BookDecisionRequestDto requestDto) {
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 도서를 찾을 수 없습니다. id=" + bookId));
-
-        book.decideFinalDisposition(requestDto.getDecision());
-
-        return BookDecisionResponseDto.builder()
-                .bookId(book.getId())
-                .status(book.getStatus().name())
-                .decidedAt(LocalDateTime.now())
-                .build();
-    }
 
     /**
      * 4. [추가됨] 특정 상태(예: TRANSFERRED, PRESERVED, DISCARDED)의 도서 목록 조회
@@ -101,9 +85,13 @@ public class BookWearStatusService {
         return bookRepository.findAllByStatus(status)
                 .stream()
                 .map(book -> BookSummaryResponseDto.builder()
-                        .bookId(book.getId())
+                        .bookId(book.getBookId())
                         .title(book.getTitle())
                         .author(book.getAuthor())
+                        .publisher(book.getPublisher())
+                        .isbn(book.getIsbn())
+                        .kdcCode(book.getKdcCode())
+                        .kdcClass(book.getKdcClass())
                         .callNumber(book.getCallNumber())
                         .coverUrl(book.getCoverUrl())
                         .status(book.getStatus().name())
@@ -115,15 +103,15 @@ public class BookWearStatusService {
         Book book = batch.getBook();
         return BookCheckCompletedListResponseDto.builder()
                 .resultBatchId(batch.getId())
-                .bookId(book.getId())
+                .bookId(book.getBookId())
                 .title(book.getTitle())
                 .author(book.getAuthor())
                 .publisher(book.getPublisher())
-                .genre(book.getGenre())
                 .isbn(book.getIsbn())
+                .kdcCode(book.getKdcCode())
+                .kdcClass(book.getKdcClass())
                 .callNumber(book.getCallNumber())
                 .coverUrl(book.getCoverUrl())
-                .turnoverRate(book.getTurnoverRate())
                 .checkedDate(batch.getCheckedDate())
                 .librarianName(batch.getLibrarianCode())
                 .totalScore(batch.getTotalScore())
