@@ -15,4 +15,4 @@ COPY --from=build /app/build/libs/*-SNAPSHOT.jar app.jar
 # 서버 시작 시 사용할 포트 노출 (Render는 기본적으로 내부에서 포트를 자동 감지함)
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx300m", "-XX:MaxMetaspaceSize=128m", "-jar", "app.jar"]
