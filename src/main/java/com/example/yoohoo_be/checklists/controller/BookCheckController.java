@@ -28,11 +28,6 @@ public class BookCheckController {
     /**
      * 1. 개별 도서 점검 결과 일괄 등록
      * [POST] /api/checklists/results
-     * 응답: 201(등록 성공) / 400(필수 필드 누락 등) / 401(인증 만료) / 404(존재하지 않는 bookId)
-     * - 400, 404 는 GlobalExceptionHandler 가 처리 (BookCheckService 에서
-     *   bookId/checkItemId 못 찾으면 ResourceNotFoundException -> 404,
-     *   @Valid 검증 실패는 MethodArgumentNotValidException -> 400)
-     * - 401 은 인증 붙을 때 GlobalExceptionHandler.handleAuthentication 이 처리
      */
     @PostMapping("/results")
     public ResponseEntity<Map<String, Object>> registerCheckResult(
@@ -50,26 +45,19 @@ public class BookCheckController {
         response.put("message", "도서 점검 결과가 성공적으로 저장되었습니다.");
         response.put("data", data);
 
-        // [수정됨] 200 -> 201 Created
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
      * 2. 특정 도서의 점검 이력(전체 리스트) 조회
      * [GET] /api/checklists/books/{bookId}/results/history
+     * BookWearStatusController 의 상세(단건) 조회와 경로가 겹쳐서 분리함
+     * (상세 모달: /books/{bookId}/results, 전체 이력: /books/{bookId}/results/history)
      */
     @GetMapping("/books/{bookId}/results/history")
-    public ResponseEntity<Map<String, Object>> getCheckHistory(
-            @PathVariable Long bookId) {
-
+    public ResponseEntity<List<BookCheckHistoryResponseDto>> getBookCheckHistory(@PathVariable("bookId") Integer bookId) {
         List<BookCheckHistoryResponseDto> history = bookCheckService.getBookCheckHistory(bookId);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "SUCCESS");
-        response.put("message", "점검 이력을 성공적으로 조회했습니다.");
-        response.put("data", history);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(history);
     }
 
     /**
@@ -78,7 +66,7 @@ public class BookCheckController {
      */
     @PutMapping("/results/{resultBatchId}")
     public ResponseEntity<Map<String, Object>> updateCheckResult(
-            @PathVariable Long resultBatchId,
+            @PathVariable("resultBatchId") Long resultBatchId,
             @Valid @RequestBody BookCheckSaveRequestDto requestDto) {
 
         Long updatedBatchId = bookCheckService.updateBookCheckResult(resultBatchId, requestDto);

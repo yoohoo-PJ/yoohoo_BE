@@ -1,7 +1,7 @@
-package com.example.yoohoo_be.checklists.repository;
+package com.example.yoohoo_be.dashboard.repository;
 
-import com.example.yoohoo_be.checklists.domain.Book;
-import com.example.yoohoo_be.checklists.domain.BookStatus;
+import com.example.yoohoo_be.dashboard.domain.Book;
+import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BookRepository extends JpaRepository<Book, Long> {
+public interface BookRepository extends JpaRepository<Book, Integer> {
 
     // ISBN으로 도서 존재 여부나 도서를 찾을 때 활용
     Optional<Book> findByIsbn(String isbn);

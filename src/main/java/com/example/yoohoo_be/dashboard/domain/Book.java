@@ -1,22 +1,15 @@
-package com.example.yoohoo_be.checklists.domain;
+package com.example.yoohoo_be.dashboard.domain;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
 @Table(name = "books")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
+@NoArgsConstructor
 public class Book {
 
     private static final Set<BookStatus> FINAL_DISPOSITION_STATUSES =
@@ -25,29 +18,25 @@ public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "book_id")
-    private Long id;
+    private Integer bookId;
 
-    // [수정됨] DBML 기준 isbn은 unique + NOT NULL
-    @Column(name = "isbn", unique = true, nullable = false, length = 13)
+    @Column(name = "isbn", length = 13, nullable = false, unique = true)
     private String isbn;
 
-    @Column(name = "title", nullable = false, length = 300)
+    @Column(name = "title", length = 300, nullable = false)
     private String title;
 
-    // [수정됨] DBML 기준 author 는 NOT NULL 제약이 없음
-    @Column(name = "author")
+    @Column(name = "author", length = 200)
     private String author;
 
-    // [추가됨] 실제 DB에 있는데 엔티티에 없던 필드
-    @Column(name = "kdc_code")
+    @Column(name = "publisher", length = 200)
+    private String publisher;
+
+    @Column(name = "kdc_code", length = 10)
     private String kdcCode;
 
-    // [추가됨]
-    @Column(name = "kdc_class")
+    @Column(name = "kdc_class", length = 1)
     private String kdcClass;
-
-    @Column(name = "publisher")
-    private String publisher;
 
     @Column(name = "call_number")
     private String callNumber;
@@ -55,15 +44,12 @@ public class Book {
     @Column(name = "cover_url")
     private String coverUrl;
 
-    // [제거됨] genre, turnover_rate -> DBML에 존재하지 않는 컬럼이었음
-    // (turnover_rate는 book 단위가 아니라 library_monthly_stats 에 도서관 단위로 존재)
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private BookStatus status;
+    private BookStatus status = BookStatus.NORMAL;
 
     @Column(name = "is_available", nullable = false)
-    private Boolean isAvailable;
+    private Boolean isAvailable = true;
 
     @Column(name = "wear_level")
     private String wearLevel;
@@ -71,24 +57,18 @@ public class Book {
     @Column(name = "soil_level")
     private String soilLevel;
 
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private java.time.LocalDateTime updatedAt;
 
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Builder
+    @lombok.Builder
     public Book(String isbn, String title, String author, String kdcCode, String kdcClass,
-                String publisher, String callNumber, String coverUrl,
-                BookStatus status, Boolean isAvailable) {
-        this.isbn = isbn;
+                String publisher, String callNumber, String coverUrl, BookStatus status, Boolean isAvailable) {
         this.title = title;
         this.author = author;
+        this.publisher = publisher;
+        this.isbn = isbn;
         this.kdcCode = kdcCode;
         this.kdcClass = kdcClass;
-        this.publisher = publisher;
         this.callNumber = callNumber;
         this.coverUrl = coverUrl;
         this.status = (status != null) ? status : BookStatus.NORMAL;

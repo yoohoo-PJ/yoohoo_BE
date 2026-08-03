@@ -3,12 +3,14 @@ package com.example.yoohoo_be.dashboard.service;
 import com.example.yoohoo_be.dashboard.domain.Library;
 import com.example.yoohoo_be.dashboard.domain.LibraryMonthlyStats;
 import com.example.yoohoo_be.dashboard.domain.RegionalPopulation;
+import com.example.yoohoo_be.dashboard.dto.DashboardCountDto;
 import com.example.yoohoo_be.dashboard.dto.MonthlyLoanDto;
 import com.example.yoohoo_be.dashboard.dto.NetworkDistanceDto;
 import com.example.yoohoo_be.dashboard.dto.RegionalPopulationDto;
 import com.example.yoohoo_be.dashboard.repository.LibraryMonthlyStatsRepository;
 import com.example.yoohoo_be.dashboard.repository.LibraryRepository;
 import com.example.yoohoo_be.dashboard.repository.RegionalPopulationRepository;
+import com.example.yoohoo_be.dashboard.repository.UscoreResultRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +36,7 @@ public class DashboardService {
     private final RegionalPopulationRepository regionalPopulationRepository;
     private final LibraryRepository libraryRepository;
     private final LibraryMonthlyStatsRepository monthlyStatsRepository;
+    private final UscoreResultRepository uscoreResultRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${kakao.rest-api-key}")
@@ -78,10 +81,10 @@ public class DashboardService {
     }
 
     // 도서관 네트워크 거리 조회 (카카오 API)
-    public List<NetworkDistanceDto> getRealDistancesFromBuksuwon() {
-        // 1. 기준 도서관 (북수원도서관) 찾기
-        Library origin = libraryRepository.findByLibraryName("북수원도서관")
-                .orElseThrow(() -> new IllegalArgumentException("북수원도서관 정보를 찾을 수 없습니다."));
+    public List<NetworkDistanceDto> getRealDistancesFromCentral() {
+        // 1. 기준 도서관 (경기도교육청중앙도서관) 찾기
+        Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
+                .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
         // 2. 전체 도서관 목록 불러오기
         List<Library> allLibraries = libraryRepository.findAll();
@@ -105,12 +108,33 @@ public class DashboardService {
                     .build());
         }
 
-        // 4. 거리가 짧은 순으로 정렬하여 상위 5개만 반환
-        return distances.stream()
-                .filter(dto -> dto.getLength() >= 0) // 에러로 인해 -1이 된 값 등 제외
+        // 4. 거리가 짧은 순으로 정렬하여 전체 리스트 생성
+        List<NetworkDistanceDto> sortedDistances = distances.stream()
+                .filter(dto -> dto.getLength() >= 0) // 에러로 인해 -1이 된 값은 제외
                 .sorted(Comparator.comparingDouble(NetworkDistanceDto::getLength))
-                .limit(5)
                 .collect(Collectors.toList());
+
+        // 상위 5개 추출
+        List<NetworkDistanceDto> top5 = new ArrayList<>(sortedDistances.stream().limit(5).collect(Collectors.toList()));
+
+        // 5. '작은도서관'이 포함되어 있는지 확인
+        boolean hasSmallLibrary = top5.stream().anyMatch(dto -> dto.getLibraryName().contains("작은도서관"));
+
+        // 6. '작은도서관'이 없다면 가장 가까운 작은도서관을 찾아 5번째 도서관과 교체
+        if (!hasSmallLibrary && sortedDistances.size() > 5) {
+            NetworkDistanceDto closestSmallLib = sortedDistances.stream()
+                    .filter(dto -> dto.getLibraryName().contains("작은도서관"))
+                    .findFirst()
+                    .orElse(null);
+
+            if (closestSmallLib != null) {
+                top5.remove(top5.size() - 1); // 가장 먼 도서관 제거
+                top5.add(closestSmallLib); // 작은도서관 추가
+                top5.sort(Comparator.comparingDouble(NetworkDistanceDto::getLength)); // 다시 거리순 정렬
+            }
+        }
+
+        return top5;
     }
 
     private double fetchKakaoDistance(Library origin, Library dest) {
@@ -164,9 +188,9 @@ public class DashboardService {
 
     // 도서관 월별 대출 현황 조회 (12개월)
     public List<MonthlyLoanDto> getMonthlyLoans() {
-        // 1. 기준 도서관 (북수원도서관) 찾기
-        Library origin = libraryRepository.findByLibraryName("북수원도서관")
-                .orElseThrow(() -> new IllegalArgumentException("북수원도서관 정보를 찾을 수 없습니다."));
+        // 1. 기준 도서관 (경기도교육청중앙도서관) 찾기
+        Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
+                .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
         // 2. DB에서 최근 12개월 치 데이터 조회 (최신순)
         List<LibraryMonthlyStats> stats = monthlyStatsRepository.findTop12ByLibraryOrderByStatYearDescStatMonthDesc(origin);
@@ -184,5 +208,35 @@ public class DashboardService {
                     .turnoverRate(stat.getTurnoverRate() == null ? 0.0 : stat.getTurnoverRate().doubleValue())
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    // 유휴화 도서 수 조회
+    public DashboardCountDto getIdleBooksCount() {
+        Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
+                .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
+
+        long count = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
+        return new DashboardCountDto(count);
+    }
+
+    // 파손 심사 대기 수 조회
+    public DashboardCountDto getDamagePendingCount() {
+        Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
+                .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
+
+        long count = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
+        return new DashboardCountDto(count);
+    }
+
+    // 이관 검토 대기 수 조회
+    public DashboardCountDto getTransferPendingCount() {
+        Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
+                .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
+
+        long count = uscoreResultRepository.countTransferPendingByLibrary(
+                origin.getLibraryId(), 
+                com.example.yoohoo_be.dashboard.domain.InspectionStatus.PASS
+        );
+        return new DashboardCountDto(count);
     }
 }

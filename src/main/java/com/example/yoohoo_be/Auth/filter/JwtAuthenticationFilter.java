@@ -48,7 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             // 3-2. JWT 토큰 파싱 및 검증 오류 발생 시 Unauthorized 예외 처리
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write(e.getMessage());
+            response.setContentType("application/json;charset=UTF-8");
+            response.setCharacterEncoding("UTF-8");
+            String jsonResponse = String.format("{\"message\":\"%s\",\"error\":\"Unauthorized\",\"status\":401}", e.getMessage());
+            response.getWriter().write(jsonResponse);
             return;
         }
 

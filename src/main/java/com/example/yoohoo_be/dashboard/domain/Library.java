@@ -44,4 +44,7 @@ public class Library {
     // 주소 컬럼 (예: "팔달구", "장안구")
     @Column(name = "address")
     private String address;
+
+    @Column(name = "max_holdings", insertable = false, updatable = false)
+    private Integer maxHoldings;
 }

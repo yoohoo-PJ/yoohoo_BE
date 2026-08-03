@@ -26,6 +26,7 @@ public class BulkDecisionRequestDto {
     @Getter
     @NoArgsConstructor
     public static class DecisionItemDto {
+
         @NotNull(message = "resultBatchId는 필수입니다.")
         private Long resultBatchId;
 
