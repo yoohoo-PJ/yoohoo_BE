@@ -1,0 +1,19 @@
+spring:
+  profiles:
+    active: local # 기본으로 local 프로필을 활성화합니다.
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+kakao:
+  rest-api-key: "4513e054ee3cc226682c486c5c1d0a8a"
+
+jwt:
+  secret:
+    key: "vmfhaltmskdlstkfkdgodyqheldiqheldkfaheldqheldqheld" # 256비트 이상의 임의의 긴 문자열 (개발용)
+  expiration:
+    time: 86400000 # 24시간 (밀리초 단위)
