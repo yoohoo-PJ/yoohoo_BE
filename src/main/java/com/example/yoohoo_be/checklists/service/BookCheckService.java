@@ -3,9 +3,15 @@ package com.example.yoohoo_be.checklists.service;
 import com.example.yoohoo_be.checklists.domain.Book;
 import com.example.yoohoo_be.checklists.domain.BookCheckBatch;
 import com.example.yoohoo_be.checklists.domain.BookCheckResultItem;
+import com.example.yoohoo_be.checklists.domain.BookStatus;
 import com.example.yoohoo_be.checklists.domain.CheckItem;
 import com.example.yoohoo_be.checklists.dto.BookCheckHistoryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookCheckSaveRequestDto;
+import com.example.yoohoo_be.checklists.dto.BulkDecisionRequestDto;
+import com.example.yoohoo_be.checklists.dto.DecisionConfirmRequestDto;
+import com.example.yoohoo_be.checklists.dto.DecisionConfirmResponseDto;
+import com.example.yoohoo_be.checklists.exception.InvalidRequestException;
+import com.example.yoohoo_be.checklists.exception.ResourceNotFoundException;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
 import com.example.yoohoo_be.checklists.repository.BookRepository;
 import com.example.yoohoo_be.checklists.repository.CheckItemRepository;
@@ -13,7 +19,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,16 +32,24 @@ public class BookCheckService {
     private final BookCheckBatchRepository bookCheckBatchRepository;
     private final CheckItemRepository checkItemRepository;
 
+    // 프론트 명세 decision 값 -> 내부 BookStatus 매핑
+    private static final Map<String, BookStatus> DECISION_TO_STATUS = Map.of(
+            "DISPOSAL", BookStatus.DISCARDED,
+            "RELOCATION", BookStatus.TRANSFERRED,
+            "KEEP", BookStatus.PRESERVED
+    );
+
     /**
      * 1. 점검 결과 최초 등록 (POST)
      */
     @Transactional
     public Long createBookCheckResult(BookCheckSaveRequestDto requestDto) {
         Book book = bookRepository.findById(requestDto.getBookId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 도서를 찾을 수 없습니다. id=" + requestDto.getBookId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "해당 도서를 찾을 수 없습니다. id=" + requestDto.getBookId()));
 
         BookCheckBatch batch = BookCheckBatch.builder()
-                .book(book) // bookId(Long) -> book(Book 연관관계)
+                .book(book)
                 .librarianCode(requestDto.getLibrarianCode())
                 .checkedDate(requestDto.getCheckedDate())
                 .totalScore(requestDto.getTotalScore())
@@ -41,7 +57,7 @@ public class BookCheckService {
 
         for (BookCheckSaveRequestDto.CheckItemResultDto itemDto : requestDto.getCheckResults()) {
             CheckItem checkItem = checkItemRepository.findById(itemDto.getCheckItemId())
-                    .orElseThrow(() -> new IllegalArgumentException(
+                    .orElseThrow(() -> new ResourceNotFoundException(
                             "해당 점검 항목을 찾을 수 없습니다. id=" + itemDto.getCheckItemId()));
 
             BookCheckResultItem item = BookCheckResultItem.builder()
@@ -55,7 +71,6 @@ public class BookCheckService {
 
         BookCheckBatch savedBatch = bookCheckBatchRepository.save(batch);
 
-        // 점검 완료 시 도서 상태를 IN_PROGRESS(마모 처리 현황)로 전환
         boolean isAvailable = requestDto.getTotalScore() >= 60;
         book.completeCheckAndMoveToInProgress("WORN_CHECKED", "SOIL_CHECKED", isAvailable);
 
@@ -64,9 +79,14 @@ public class BookCheckService {
 
     /**
      * 2. 특정 도서의 점검 이력(전체 리스트) 조회 (GET)
+     * [수정됨] bookId 자체가 존재하지 않으면 404, 존재하지만 이력이 없으면 빈 배열([])
      */
     @Transactional(readOnly = true)
     public List<BookCheckHistoryResponseDto> getBookCheckHistory(Long bookId) {
+        if (!bookRepository.existsById(bookId)) {
+            throw new ResourceNotFoundException("해당 도서를 찾을 수 없습니다. id=" + bookId);
+        }
+
         List<BookCheckBatch> batches = bookCheckBatchRepository.findAllByBookIdOrderByIdDesc(bookId);
 
         return batches.stream().map(batch -> {
@@ -98,7 +118,8 @@ public class BookCheckService {
     @Transactional
     public Long updateBookCheckResult(Long resultBatchId, BookCheckSaveRequestDto requestDto) {
         BookCheckBatch batch = bookCheckBatchRepository.findById(resultBatchId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 점검 이력을 찾을 수 없습니다. id=" + resultBatchId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "해당 점검 이력을 찾을 수 없습니다. id=" + resultBatchId));
 
         batch.updateBatch(requestDto.getLibrarianCode(), requestDto.getTotalScore());
 
@@ -114,5 +135,57 @@ public class BookCheckService {
         }
 
         return batch.getId();
+    }
+
+    /**
+     * 4. [신규] 폐기/이관/보존 결정 확정 (resultBatchId 기준)
+     * [PUT] /api/checklists/results/{resultBatchId}/decision
+     */
+    @Transactional
+    public DecisionConfirmResponseDto confirmDecision(Long resultBatchId, DecisionConfirmRequestDto requestDto) {
+        BookCheckBatch batch = bookCheckBatchRepository.findById(resultBatchId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "존재하지 않는 점검 결과입니다. id=" + resultBatchId));
+
+        BookStatus mappedStatus = mapDecisionToBookStatus(requestDto.getDecision());
+        batch.getBook().decideFinalDisposition(mappedStatus);
+
+        return DecisionConfirmResponseDto.builder()
+                .resultBatchId(batch.getId())
+                .decision(requestDto.getDecision())
+                .decidedAt(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * 5. [신규] 폐기/이관/보존 결정 일괄 확정
+     * [PUT] /api/checklists/results/decisions
+     */
+    @Transactional
+    public List<DecisionConfirmResponseDto> confirmBulkDecisions(BulkDecisionRequestDto requestDto) {
+        return requestDto.getItems().stream()
+                .map(item -> {
+                    BookCheckBatch batch = bookCheckBatchRepository.findById(item.getResultBatchId())
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "존재하지 않는 점검 결과입니다. id=" + item.getResultBatchId()));
+
+                    BookStatus mappedStatus = mapDecisionToBookStatus(item.getDecision());
+                    batch.getBook().decideFinalDisposition(mappedStatus);
+
+                    return DecisionConfirmResponseDto.builder()
+                            .resultBatchId(batch.getId())
+                            .decision(item.getDecision())
+                            .decidedAt(LocalDateTime.now())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    private BookStatus mapDecisionToBookStatus(String decision) {
+        BookStatus status = DECISION_TO_STATUS.get(decision);
+        if (status == null) {
+            throw new InvalidRequestException("decision 값은 DISPOSAL, RELOCATION, KEEP 중 하나여야 합니다.");
+        }
+        return status;
     }
 }
