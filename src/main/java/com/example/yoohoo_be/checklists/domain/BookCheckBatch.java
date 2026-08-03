@@ -9,7 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -37,15 +37,11 @@ public class BookCheckBatch {
     @Column(name = "librarian_code", nullable = false, length = 50)
     private String librarianCode; // 점검 수행 사서/담당자 코드
 
-    @Column(name = "checked_date", nullable = false, length = 20)
+    @Column(name = "checked_date", length = 20)
     private String checkedDate; // 점검 수행 날짜 (YYYY-MM-DD 형식)
 
-    @Column(name = "total_score", nullable = false)
+    @Column(name = "total_score")
     private Integer totalScore; // 점검 결과 총 점수
-
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt; // 최초 등록 일시
 
     @LastModifiedDate
     @Column(name = "updated_at")

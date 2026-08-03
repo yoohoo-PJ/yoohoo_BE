@@ -4,11 +4,16 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+
 @Entity
 @Table(name = "books")
 @Getter
 @NoArgsConstructor
 public class Book {
+
+    private static final Set<BookStatus> FINAL_DISPOSITION_STATUSES =
+            Set.of(BookStatus.DISCARDED, BookStatus.TRANSFERRED, BookStatus.PRESERVED);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,12 +61,14 @@ public class Book {
     private java.time.LocalDateTime updatedAt;
 
     @lombok.Builder
-    public Book(String title, String author, String publisher, String isbn,
-                String callNumber, String coverUrl, BookStatus status, Boolean isAvailable) {
+    public Book(String isbn, String title, String author, String kdcCode, String kdcClass,
+                String publisher, String callNumber, String coverUrl, BookStatus status, Boolean isAvailable) {
         this.title = title;
         this.author = author;
         this.publisher = publisher;
         this.isbn = isbn;
+        this.kdcCode = kdcCode;
+        this.kdcClass = kdcClass;
         this.callNumber = callNumber;
         this.coverUrl = coverUrl;
         this.status = (status != null) ? status : BookStatus.NORMAL;
@@ -84,5 +91,14 @@ public class Book {
         this.wearLevel = wearLevel;
         this.soilLevel = soilLevel;
         this.isAvailable = isAvailable;
+    }
+
+    public void decideFinalDisposition(BookStatus decision) {
+        if (decision == null || !FINAL_DISPOSITION_STATUSES.contains(decision)) {
+            throw new IllegalArgumentException(
+                    "최종 처리 결정은 DISCARDED, TRANSFERRED, PRESERVED 중 하나여야 합니다. 입력값: " + decision);
+        }
+        this.status = decision;
+        this.isAvailable = false;
     }
 }

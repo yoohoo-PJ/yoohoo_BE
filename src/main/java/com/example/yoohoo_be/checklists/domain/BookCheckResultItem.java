@@ -14,7 +14,7 @@ public class BookCheckResultItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "result_item_id")
+    @Column(name = "id")
     private Long id; // 항목별 결과 고유 PK
 
     @ManyToOne(fetch = FetchType.LAZY)
