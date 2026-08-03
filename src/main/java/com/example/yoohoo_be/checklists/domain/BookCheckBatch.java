@@ -5,7 +5,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -23,28 +22,26 @@ public class BookCheckBatch {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "result_batch_id")
-    private Long id; // 점검 그룹 고유 ID (PK)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
-    private Book book; // 점검 대상 도서
+    private Book book;
 
     @Column(name = "librarian_code", nullable = false, length = 50)
-    private String librarianCode; // 점검 수행 사서/담당자 코드
+    private String librarianCode;
 
-    @Column(name = "checked_date", nullable = false, length = 20)
-    private String checkedDate; // 점검 수행 날짜 (YYYY-MM-DD 형식)
+    @Column(name = "checked_date", length = 20)
+    private String checkedDate;
 
-    @Column(name = "total_score", nullable = false)
-    private Integer totalScore; // 점검 결과 총 점수
+    @Column(name = "total_score")
+    private Integer totalScore;
 
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt; // 최초 등록 일시
+    // [제거됨] createdAt -> DBML book_check_batches 테이블에 created_at 컬럼 자체가 없음
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt; // 수정 일시
+    private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "bookCheckBatch", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookCheckResultItem> items = new ArrayList<>();

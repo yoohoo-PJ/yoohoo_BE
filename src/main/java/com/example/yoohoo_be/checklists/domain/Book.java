@@ -19,51 +19,57 @@ import java.util.Set;
 @EntityListeners(AuditingEntityListener.class)
 public class Book {
 
-    // 최종 처리 결정으로 허용되는 상태 (폐기/이관/보존 확정 API 에서 검증용)
     private static final Set<BookStatus> FINAL_DISPOSITION_STATUSES =
             Set.of(BookStatus.DISCARDED, BookStatus.TRANSFERRED, BookStatus.PRESERVED);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "book_id")
-    private Long id; // 도서 고유 ID (PK)
+    private Long id;
 
-    @Column(name = "title", nullable = false)
-    private String title; // 도서명
+    // [수정됨] DBML 기준 isbn은 unique + NOT NULL
+    @Column(name = "isbn", unique = true, nullable = false, length = 13)
+    private String isbn;
 
-    @Column(name = "author", nullable = false)
-    private String author; // 저자명
+    @Column(name = "title", nullable = false, length = 300)
+    private String title;
+
+    // [수정됨] DBML 기준 author 는 NOT NULL 제약이 없음
+    @Column(name = "author")
+    private String author;
+
+    // [추가됨] 실제 DB에 있는데 엔티티에 없던 필드
+    @Column(name = "kdc_code")
+    private String kdcCode;
+
+    // [추가됨]
+    @Column(name = "kdc_class")
+    private String kdcClass;
 
     @Column(name = "publisher")
-    private String publisher; // 출판사
-
-    @Column(name = "isbn", unique = true)
-    private String isbn; // 도서 ISBN
-
-    @Column(name = "genre")
-    private String genre; // [추가됨] 도서 장르
+    private String publisher;
 
     @Column(name = "call_number")
-    private String callNumber; // 청구기호
+    private String callNumber;
 
     @Column(name = "cover_url")
-    private String coverUrl; // 도서 표지 이미지 URL
+    private String coverUrl;
 
-    @Column(name = "turnover_rate")
-    private Double turnoverRate; // [추가됨] 도서 회전율(대출 빈도 지표) - 산출 로직은 별도 확인 필요
+    // [제거됨] genre, turnover_rate -> DBML에 존재하지 않는 컬럼이었음
+    // (turnover_rate는 book 단위가 아니라 library_monthly_stats 에 도서관 단위로 존재)
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private BookStatus status; // 도서 처리 워크플로우 상태
+    private BookStatus status;
 
     @Column(name = "is_available", nullable = false)
-    private Boolean isAvailable; // 대출 가능 여부
+    private Boolean isAvailable;
 
     @Column(name = "wear_level")
-    private String wearLevel; // 책 마모 정도 등급
+    private String wearLevel;
 
     @Column(name = "soil_level")
-    private String soilLevel; // 책 오염 정도 등급
+    private String soilLevel;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
@@ -74,22 +80,20 @@ public class Book {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Book(String title, String author, String publisher, String isbn, String genre,
-                String callNumber, String coverUrl, Double turnoverRate,
+    public Book(String isbn, String title, String author, String kdcCode, String kdcClass,
+                String publisher, String callNumber, String coverUrl,
                 BookStatus status, Boolean isAvailable) {
+        this.isbn = isbn;
         this.title = title;
         this.author = author;
+        this.kdcCode = kdcCode;
+        this.kdcClass = kdcClass;
         this.publisher = publisher;
-        this.isbn = isbn;
-        this.genre = genre;
         this.callNumber = callNumber;
         this.coverUrl = coverUrl;
-        this.turnoverRate = turnoverRate;
         this.status = (status != null) ? status : BookStatus.NORMAL;
         this.isAvailable = (isAvailable != null) ? isAvailable : true;
     }
-
-    // ================= 비즈니스 편의 메서드 ================= //
 
     public void markAsIdle() {
         this.status = BookStatus.IDLE;
@@ -109,16 +113,12 @@ public class Book {
         this.isAvailable = isAvailable;
     }
 
-    /**
-     * [추가됨] 마모 처리 현황에서 사서가 폐기/이관/보존 중 하나로 최종 결정을 확정할 때 호출.
-     * React state 로만 관리되던 결정을 DB 에 영속화하기 위한 메서드.
-     */
     public void decideFinalDisposition(BookStatus decision) {
         if (decision == null || !FINAL_DISPOSITION_STATUSES.contains(decision)) {
             throw new IllegalArgumentException(
                     "최종 처리 결정은 DISCARDED, TRANSFERRED, PRESERVED 중 하나여야 합니다. 입력값: " + decision);
         }
         this.status = decision;
-        this.isAvailable = false; // 세 결정 모두 더 이상 대출 불가 상태로 전환
+        this.isAvailable = false;
     }
 }

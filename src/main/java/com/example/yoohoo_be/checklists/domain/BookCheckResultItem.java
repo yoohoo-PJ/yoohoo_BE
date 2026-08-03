@@ -14,25 +14,25 @@ public class BookCheckResultItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "result_item_id")
-    private Long id; // 항목별 결과 고유 PK
+    @Column(name = "id") // [수정됨] result_item_id -> id (실제 DB 컬럼명과 일치)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "result_batch_id", nullable = false)
-    private BookCheckBatch bookCheckBatch; // 소속된 점검 그룹 (FK)
+    private BookCheckBatch bookCheckBatch;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "check_item_id", nullable = false)
-    private CheckItem checkItem; // 점검 항목 (예: 표지 찢어짐 항목)
+    private CheckItem checkItem;
 
     @Column(name = "is_passed", nullable = false)
-    private Boolean isPassed; // 양호 여부 (true: 정상, false: 파손/불량)
+    private Boolean isPassed;
 
     @Column(name = "item_score")
-    private Integer itemScore; // 해당 항목 판정 점수 (선택적)
+    private Integer itemScore;
 
     @Column(name = "note", columnDefinition = "TEXT")
-    private String note; // 특이사항 메모 (선택적)
+    private String note;
 
     @Builder
     public BookCheckResultItem(CheckItem checkItem, Boolean isPassed, Integer itemScore, String note) {
