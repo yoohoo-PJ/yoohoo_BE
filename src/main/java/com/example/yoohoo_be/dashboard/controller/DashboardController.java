@@ -2,6 +2,8 @@ package com.example.yoohoo_be.dashboard.controller;
 
 import com.example.yoohoo_be.dashboard.dto.ApiResponse;
 import com.example.yoohoo_be.dashboard.dto.DashboardCountDto;
+import com.example.yoohoo_be.dashboard.dto.IdleBooksCountResponseDto;
+import com.example.yoohoo_be.dashboard.dto.DamagePendingCountResponseDto;
 import com.example.yoohoo_be.dashboard.dto.MonthlyLoanDto;
 import com.example.yoohoo_be.dashboard.dto.NetworkDistanceDto;
 import com.example.yoohoo_be.dashboard.dto.RegionalPopulationDto;
@@ -36,8 +38,8 @@ public class DashboardController {
 
     // 대출되지 않는 도서 수 조회
     @GetMapping("/idle-books/count")
-    public ResponseEntity<ApiResponse<DashboardCountDto>> getIdleBooksCount() {
-        DashboardCountDto response = dashboardService.getIdleBooksCount();
+    public ResponseEntity<ApiResponse<IdleBooksCountResponseDto>> getIdleBooksCount() {
+        IdleBooksCountResponseDto response = dashboardService.getIdleBooksCount();
         return ResponseEntity.ok(new ApiResponse<>(true, response));
     }
 
@@ -50,8 +52,8 @@ public class DashboardController {
 
     // 파손 심사 대기 수 조회
     @GetMapping("/damage-pending/count")
-    public ResponseEntity<ApiResponse<DashboardCountDto>> getDamagePendingCount() {
-        DashboardCountDto response = dashboardService.getDamagePendingCount();
+    public ResponseEntity<ApiResponse<DamagePendingCountResponseDto>> getDamagePendingCount() {
+        DamagePendingCountResponseDto response = dashboardService.getDamagePendingCount();
         return ResponseEntity.ok(new ApiResponse<>(true, response));
     }
 

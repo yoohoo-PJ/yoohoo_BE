@@ -4,6 +4,8 @@ import com.example.yoohoo_be.dashboard.domain.Library;
 import com.example.yoohoo_be.dashboard.domain.LibraryMonthlyStats;
 import com.example.yoohoo_be.dashboard.domain.RegionalPopulation;
 import com.example.yoohoo_be.dashboard.dto.DashboardCountDto;
+import com.example.yoohoo_be.dashboard.dto.IdleBooksCountResponseDto;
+import com.example.yoohoo_be.dashboard.dto.DamagePendingCountResponseDto;
 import com.example.yoohoo_be.dashboard.dto.MonthlyLoanDto;
 import com.example.yoohoo_be.dashboard.dto.NetworkDistanceDto;
 import com.example.yoohoo_be.dashboard.dto.RegionalPopulationDto;
@@ -211,21 +213,37 @@ public class DashboardService {
     }
 
     // 유휴화 도서 수 조회
-    public DashboardCountDto getIdleBooksCount() {
+    public IdleBooksCountResponseDto getIdleBooksCount() {
         Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
                 .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
-        long count = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
-        return new DashboardCountDto(count);
+        long currentCount = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
+        long lastMonthCount = 200; // TODO: 유휴화 도서의 월별 스냅샷 테이블이 없으므로 현재는 임의의 값 지정
+
+        int percentageChange = lastMonthCount == 0 ? 0 : (int) Math.round((double)(currentCount - lastMonthCount) / lastMonthCount * 100);
+
+        return IdleBooksCountResponseDto.builder()
+                .currentMonthCount(currentCount)
+                .lastMonthCount(lastMonthCount)
+                .percentageChange(percentageChange)
+                .build();
     }
 
     // 파손 심사 대기 수 조회
-    public DashboardCountDto getDamagePendingCount() {
+    public DamagePendingCountResponseDto getDamagePendingCount() {
         Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
                 .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
-        long count = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
-        return new DashboardCountDto(count);
+        long currentCount = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
+        long lastMonthCount = 404; // TODO: 파손 심사 대기의 월별 스냅샷 테이블이 없으므로 현재는 임의의 값 지정
+
+        long countChange = currentCount - lastMonthCount;
+
+        return DamagePendingCountResponseDto.builder()
+                .currentMonthCount(currentCount)
+                .lastMonthCount(lastMonthCount)
+                .countChange(countChange)
+                .build();
     }
 
     // 이관 검토 대기 수 조회
