@@ -201,15 +201,32 @@ public class DashboardService {
         Collections.reverse(stats);
 
         // 4. DTO 변환
-        return stats.stream().map(stat -> {
-            String yearMonth = String.format("%04d-%02d", stat.getStatYear(), stat.getStatMonth());
-            return MonthlyLoanDto.builder()
-                    .yearMonth(yearMonth)
-                    .totalBooks(stat.getTotalBooks() == null ? 0 : stat.getTotalBooks())
-                    .totalLoans(stat.getTotalLoans() == null ? 0 : stat.getTotalLoans())
-                    .turnoverRate(stat.getTurnoverRate() == null ? 0.0 : stat.getTurnoverRate().doubleValue())
-                    .build();
-        }).collect(Collectors.toList());
+        List<MonthlyLoanDto> result = new ArrayList<>();
+        for (int i = 0; i < stats.size(); i++) {
+            LibraryMonthlyStats stat = stats.get(i);
+            String date = String.format("%04d-%02d", stat.getStatYear(), stat.getStatMonth());
+            
+            int currentTotalBooks = stat.getTotalBooks() == null ? 0 : stat.getTotalBooks();
+            int currentTotalLoans = stat.getTotalLoans() == null ? 0 : stat.getTotalLoans();
+            double turnoverRate = stat.getTurnoverRate() == null ? 0.0 : stat.getTurnoverRate().doubleValue();
+            
+            int booksDelta = 0;
+            if (i > 0) {
+                LibraryMonthlyStats prevStat = stats.get(i - 1);
+                int prevTotalBooks = prevStat.getTotalBooks() == null ? 0 : prevStat.getTotalBooks();
+                booksDelta = currentTotalBooks - prevTotalBooks;
+            }
+
+            result.add(MonthlyLoanDto.builder()
+                    .date(date)
+                    .totalBooks(currentTotalBooks)
+                    .totalLoans(currentTotalLoans)
+                    .turnoverRate(turnoverRate)
+                    .booksDelta(booksDelta)
+                    .build());
+        }
+        
+        return result;
     }
 
     // 유휴화 도서 수 조회

@@ -10,8 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MonthlyLoanDto {
-    private String yearMonth;
+    private String date;
     private Integer totalBooks;
     private Integer totalLoans;
     private Double turnoverRate;
+    private Integer booksDelta;
 }
