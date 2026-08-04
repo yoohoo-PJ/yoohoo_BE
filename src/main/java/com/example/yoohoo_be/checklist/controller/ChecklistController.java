@@ -24,10 +24,13 @@ public class ChecklistController {
     @GetMapping
     public ResponseEntity<?> getChecklists(
             @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "genre", required = false) String genre,
+            @RequestParam(name = "sortOrder", required = false) String sortOrder,
             Pageable pageable) {
         
         if ("DAMAGE_PENDING".equals(status)) {
-            Page<DamagePendingListDto> pageData = checklistService.getDamagePendingPage(pageable);
+            Page<DamagePendingListDto> pageData = checklistService.getDamagePendingPage(keyword, genre, sortOrder, pageable);
             return ResponseEntity.ok(new PaginatedApiResponse<>(true, pageData));
         }
         

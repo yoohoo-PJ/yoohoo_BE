@@ -21,7 +21,7 @@ public class ChecklistService {
     private final UscoreResultRepository uscoreResultRepository;
     private final LibraryRepository libraryRepository;
 
-    public Page<DamagePendingListDto> getDamagePendingPage(Pageable pageable) {
+    public Page<DamagePendingListDto> getDamagePendingPage(String keyword, String genre, String sortOrder, Pageable pageable) {
         /*
         Page<UscoreResult> results = uscoreResultRepository.findDamagePendingPage(pageable);
 
@@ -58,6 +58,29 @@ public class ChecklistService {
                 .sLoan(u.getSLoan())
                 .sDecay(u.getSDecay())
                 .build()).collect(java.util.stream.Collectors.toList());
+
+        // 1. Keyword 필터링 (제목 또는 ISBN)
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String lowerKeyword = keyword.trim().toLowerCase();
+            dtoList = dtoList.stream()
+                    .filter(dto -> (dto.getBookTitle() != null && dto.getBookTitle().toLowerCase().contains(lowerKeyword)) ||
+                                   (dto.getIsbn() != null && dto.getIsbn().toLowerCase().contains(lowerKeyword)))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        // 2. 장르 필터링
+        if (genre != null && !genre.trim().isEmpty()) {
+            dtoList = dtoList.stream()
+                    .filter(dto -> genre.trim().equals(dto.getGenre()))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        // 3. 점수 정렬
+        if ("ASC".equalsIgnoreCase(sortOrder)) {
+            dtoList.sort(java.util.Comparator.comparing(DamagePendingListDto::getIdleScore, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+        } else if ("DESC".equalsIgnoreCase(sortOrder)) {
+            dtoList.sort(java.util.Comparator.comparing(DamagePendingListDto::getIdleScore, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        }
                 
         int start = (int) pageable.getOffset();
         int end = Math.min((start + pageable.getPageSize()), dtoList.size());
