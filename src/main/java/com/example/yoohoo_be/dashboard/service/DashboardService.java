@@ -4,6 +4,8 @@ import com.example.yoohoo_be.dashboard.domain.Library;
 import com.example.yoohoo_be.dashboard.domain.LibraryMonthlyStats;
 import com.example.yoohoo_be.dashboard.domain.RegionalPopulation;
 import com.example.yoohoo_be.dashboard.dto.DashboardCountDto;
+import com.example.yoohoo_be.dashboard.dto.IdleBooksCountResponseDto;
+import com.example.yoohoo_be.dashboard.dto.DamagePendingCountResponseDto;
 import com.example.yoohoo_be.dashboard.dto.MonthlyLoanDto;
 import com.example.yoohoo_be.dashboard.dto.NetworkDistanceDto;
 import com.example.yoohoo_be.dashboard.dto.RegionalPopulationDto;
@@ -199,33 +201,80 @@ public class DashboardService {
         Collections.reverse(stats);
 
         // 4. DTO 변환
-        return stats.stream().map(stat -> {
-            String yearMonth = String.format("%04d-%02d", stat.getStatYear(), stat.getStatMonth());
-            return MonthlyLoanDto.builder()
-                    .yearMonth(yearMonth)
-                    .totalBooks(stat.getTotalBooks() == null ? 0 : stat.getTotalBooks())
-                    .totalLoans(stat.getTotalLoans() == null ? 0 : stat.getTotalLoans())
-                    .turnoverRate(stat.getTurnoverRate() == null ? 0.0 : stat.getTurnoverRate().doubleValue())
-                    .build();
-        }).collect(Collectors.toList());
+        List<MonthlyLoanDto> result = new ArrayList<>();
+        for (int i = 0; i < stats.size(); i++) {
+            LibraryMonthlyStats stat = stats.get(i);
+            String date = String.format("%04d-%02d", stat.getStatYear(), stat.getStatMonth());
+            
+            int currentTotalBooks = stat.getTotalBooks() == null ? 0 : stat.getTotalBooks();
+            int currentTotalLoans = stat.getTotalLoans() == null ? 0 : stat.getTotalLoans();
+            double turnoverRate = stat.getTurnoverRate() == null ? 0.0 : stat.getTurnoverRate().doubleValue();
+            
+            int booksDelta = 0;
+            if (i > 0) {
+                LibraryMonthlyStats prevStat = stats.get(i - 1);
+                int prevTotalBooks = prevStat.getTotalBooks() == null ? 0 : prevStat.getTotalBooks();
+                booksDelta = currentTotalBooks - prevTotalBooks;
+            }
+
+            result.add(MonthlyLoanDto.builder()
+                    .date(date)
+                    .totalBooks(currentTotalBooks)
+                    .totalLoans(currentTotalLoans)
+                    .turnoverRate(turnoverRate)
+                    .booksDelta(booksDelta)
+                    .build());
+        }
+        
+        return result;
     }
 
     // 유휴화 도서 수 조회
-    public DashboardCountDto getIdleBooksCount() {
+    public IdleBooksCountResponseDto getIdleBooksCount() {
         Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
                 .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
-        long count = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
-        return new DashboardCountDto(count);
+        long currentCount = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
+        
+        // 지난달 연/월 계산
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate lastMonth = today.minusMonths(1);
+        
+        long lastMonthCount = monthlyStatsRepository.findByLibraryAndStatYearAndStatMonth(origin, lastMonth.getYear(), lastMonth.getMonthValue())
+                .map(stats -> stats.getIdleBooksCount() != null ? stats.getIdleBooksCount().longValue() : 0L)
+                .orElse(0L);
+
+        int percentageChange = lastMonthCount == 0 ? 0 : (int) Math.round((double)(currentCount - lastMonthCount) / lastMonthCount * 100);
+
+        return IdleBooksCountResponseDto.builder()
+                .currentMonthCount(currentCount)
+                .lastMonthCount(lastMonthCount)
+                .percentageChange(percentageChange)
+                .build();
     }
 
     // 파손 심사 대기 수 조회
-    public DashboardCountDto getDamagePendingCount() {
+    public DamagePendingCountResponseDto getDamagePendingCount() {
         Library origin = libraryRepository.findByLibraryName("경기도교육청중앙도서관")
                 .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
-        long count = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
-        return new DashboardCountDto(count);
+        long currentCount = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
+        
+        // 지난달 연/월 계산
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate lastMonth = today.minusMonths(1);
+        
+        long lastMonthCount = monthlyStatsRepository.findByLibraryAndStatYearAndStatMonth(origin, lastMonth.getYear(), lastMonth.getMonthValue())
+                .map(stats -> stats.getDamagePendingCount() != null ? stats.getDamagePendingCount().longValue() : 0L)
+                .orElse(0L);
+
+        long countChange = currentCount - lastMonthCount;
+
+        return DamagePendingCountResponseDto.builder()
+                .currentMonthCount(currentCount)
+                .lastMonthCount(lastMonthCount)
+                .countChange(countChange)
+                .build();
     }
 
     // 이관 검토 대기 수 조회

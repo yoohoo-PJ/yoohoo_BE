@@ -6,13 +6,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MonthlyLoanDto {
-    private String date;
-    private Integer totalBooks;
-    private Integer totalLoans;
-    private Double turnoverRate;
-    private Integer booksDelta;
+@Builder
+public class DamagePendingCountResponseDto {
+    private long currentMonthCount;
+    private long lastMonthCount;
+    private long countChange;
 }

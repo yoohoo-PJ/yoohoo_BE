@@ -22,6 +22,7 @@ public class ChecklistService {
     private final LibraryRepository libraryRepository;
 
     public Page<DamagePendingListDto> getDamagePendingPage(Pageable pageable) {
+        /*
         Page<UscoreResult> results = uscoreResultRepository.findDamagePendingPage(pageable);
 
         return results.map(u -> DamagePendingListDto.builder()
@@ -35,6 +36,34 @@ public class ChecklistService {
                 .sLoan(u.getSLoan())
                 .sDecay(u.getSDecay())
                 .build());
+        */
+
+        // 데모용 응답: 100점대 100권, 90점대 100권, 80점대 100권, 70점대 100권
+        java.util.List<UscoreResult> demoBooks = new java.util.ArrayList<>();
+        org.springframework.data.domain.Pageable limit = org.springframework.data.domain.PageRequest.of(0, 100); 
+        
+        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(100.0, 101.0, limit));
+        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(90.0, 100.0, limit));
+        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(80.0, 90.0, limit));
+        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(70.0, 80.0, limit));
+        
+        java.util.List<DamagePendingListDto> dtoList = demoBooks.stream().map(u -> DamagePendingListDto.builder()
+                .resultId(u.getResultId())
+                .bookTitle(u.getBook() != null ? u.getBook().getTitle() : null)
+                .author(u.getBook() != null ? u.getBook().getAuthor() : null)
+                .genre(convertKdcToGenre(u.getBook() != null ? u.getBook().getKdcClass() : null))
+                .isbn(u.getBook() != null ? u.getBook().getIsbn() : null)
+                .idleScore(u.getUScore())
+                .sAge(u.getSAge())
+                .sLoan(u.getSLoan())
+                .sDecay(u.getSDecay())
+                .build()).collect(java.util.stream.Collectors.toList());
+                
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtoList.size());
+        java.util.List<DamagePendingListDto> subList = start > dtoList.size() ? new java.util.ArrayList<>() : dtoList.subList(start, end);
+        
+        return new org.springframework.data.domain.PageImpl<>(subList, pageable, dtoList.size());
     }
 
     private String convertKdcToGenre(String kdcClass) {

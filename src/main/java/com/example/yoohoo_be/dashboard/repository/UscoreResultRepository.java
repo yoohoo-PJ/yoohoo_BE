@@ -50,4 +50,7 @@ public interface UscoreResultRepository extends JpaRepository<UscoreResult, Long
 
     @Query("SELECT u FROM UscoreResult u JOIN FETCH u.book WHERE u.library.libraryId = :libraryId AND u.isIdle = true AND u.uScore >= :minScore AND u.uScore < :maxScore")
     java.util.List<UscoreResult> findIdleBooksByScoreRange(@Param("libraryId") Integer libraryId, @Param("minScore") Double minScore, @Param("maxScore") Double maxScore, org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT u FROM UscoreResult u JOIN FETCH u.book WHERE u.isIdle = true AND u.inspectionStatus = 'UNINSPECTED' AND u.uScore >= :minScore AND u.uScore < :maxScore")
+    java.util.List<UscoreResult> findDamagePendingByScoreRange(@Param("minScore") Double minScore, @Param("maxScore") Double maxScore, org.springframework.data.domain.Pageable pageable);
 }

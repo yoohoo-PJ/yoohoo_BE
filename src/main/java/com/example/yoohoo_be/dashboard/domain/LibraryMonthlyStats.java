@@ -33,4 +33,10 @@ public class LibraryMonthlyStats {
 
     @Column(name = "turnover_rate", precision = 5, scale = 4)
     private BigDecimal turnoverRate;
+
+    @Column(name = "idle_books_count")
+    private Integer idleBooksCount;
+
+    @Column(name = "damage_pending_count")
+    private Integer damagePendingCount;
 }
