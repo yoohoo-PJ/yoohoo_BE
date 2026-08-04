@@ -218,7 +218,14 @@ public class DashboardService {
                 .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
         long currentCount = uscoreResultRepository.countByLibraryAndIsIdle(origin.getLibraryId());
-        long lastMonthCount = 200; // TODO: 유휴화 도서의 월별 스냅샷 테이블이 없으므로 현재는 임의의 값 지정
+        
+        // 지난달 연/월 계산
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate lastMonth = today.minusMonths(1);
+        
+        long lastMonthCount = monthlyStatsRepository.findByLibraryAndStatYearAndStatMonth(origin, lastMonth.getYear(), lastMonth.getMonthValue())
+                .map(stats -> stats.getIdleBooksCount() != null ? stats.getIdleBooksCount().longValue() : 0L)
+                .orElse(0L);
 
         int percentageChange = lastMonthCount == 0 ? 0 : (int) Math.round((double)(currentCount - lastMonthCount) / lastMonthCount * 100);
 
@@ -235,7 +242,14 @@ public class DashboardService {
                 .orElseThrow(() -> new IllegalArgumentException("경기도교육청중앙도서관 정보를 찾을 수 없습니다."));
 
         long currentCount = uscoreResultRepository.countDamagePendingByLibrary(origin.getLibraryId());
-        long lastMonthCount = 404; // TODO: 파손 심사 대기의 월별 스냅샷 테이블이 없으므로 현재는 임의의 값 지정
+        
+        // 지난달 연/월 계산
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate lastMonth = today.minusMonths(1);
+        
+        long lastMonthCount = monthlyStatsRepository.findByLibraryAndStatYearAndStatMonth(origin, lastMonth.getYear(), lastMonth.getMonthValue())
+                .map(stats -> stats.getDamagePendingCount() != null ? stats.getDamagePendingCount().longValue() : 0L)
+                .orElse(0L);
 
         long countChange = currentCount - lastMonthCount;
 
