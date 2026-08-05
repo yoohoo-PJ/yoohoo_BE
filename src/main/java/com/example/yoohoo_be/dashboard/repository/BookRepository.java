@@ -16,4 +16,7 @@ public interface BookRepository extends JpaRepository<Book, Integer> {
 
     // 특정 상태(예: IDLE - 마모 점검 대상, IN_PROGRESS - 마모 처리 현황)의 도서 목록만 조회
     List<Book> findAllByStatus(BookStatus status);
+
+    // 특정 상태의 도서 건수 (예: DISCARDED 건수 → 연간 폐기 상한(7%) 검증에 사용)
+    long countByStatus(BookStatus status);
 }

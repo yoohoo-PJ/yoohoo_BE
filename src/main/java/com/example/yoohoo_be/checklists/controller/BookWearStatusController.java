@@ -4,6 +4,7 @@ import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import com.example.yoohoo_be.checklists.dto.BookCheckCompletedListResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookSummaryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookWearStatusDetailResponseDto;
+import com.example.yoohoo_be.checklists.dto.DiscardedBookListResponseDto;
 import com.example.yoohoo_be.checklists.service.BookWearStatusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +56,24 @@ public class BookWearStatusController {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "SUCCESS");
         response.put("message", status.name() + " 도서 목록을 조회했습니다.");
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 5. [신규] 폐기 도서 목록 화면 (5번째 메뉴)
+     * 폐기 확정 도서 목록과 함께, 도서관법 시행령 [별표7] 제3호에 따른
+     * 연간 폐기 상한(전체 장서의 100분의 7) 현황을 함께 제공한다.
+     * [GET] /api/checklists/discarded
+     */
+    @GetMapping("/discarded")
+    public ResponseEntity<Map<String, Object>> getDiscardedBooks() {
+        DiscardedBookListResponseDto data = bookWearStatusService.getDiscardedBooksWithQuota();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "폐기 도서 목록 및 연간 폐기 상한 현황을 조회했습니다.");
         response.put("data", data);
 
         return ResponseEntity.ok(response);
