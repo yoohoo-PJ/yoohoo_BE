@@ -65,4 +65,8 @@ public class UscoreResult {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
+
+    public void updateInspectionStatus(InspectionStatus status) {
+        this.inspectionStatus = status;
+    }
 }

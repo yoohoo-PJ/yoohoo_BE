@@ -13,6 +13,7 @@ import com.example.yoohoo_be.checklists.dto.DecisionConfirmResponseDto;
 import com.example.yoohoo_be.checklists.exception.InvalidRequestException;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
 import com.example.yoohoo_be.dashboard.repository.BookRepository;
+import com.example.yoohoo_be.dashboard.repository.UscoreResultRepository;
 import com.example.yoohoo_be.checklists.repository.CheckItemRepository;
 import com.example.yoohoo_be.common.exception.DuplicateResourceException;
 import com.example.yoohoo_be.common.exception.ResourceNotFoundException;
@@ -32,6 +33,7 @@ public class BookCheckService {
     private final BookRepository bookRepository;
     private final BookCheckBatchRepository bookCheckBatchRepository;
     private final CheckItemRepository checkItemRepository;
+    private final UscoreResultRepository uscoreResultRepository;
 
     private static final Map<String, BookStatus> DECISION_TO_STATUS = Map.of(
             "DISPOSAL", BookStatus.DISCARDED,
@@ -76,6 +78,13 @@ public class BookCheckService {
         // 점검 완료 시 도서 상태를 IN_PROGRESS(마모 처리 현황)로 전환
         boolean isAvailable = requestDto.getTotalScore() >= 60;
         book.completeCheckAndMoveToInProgress("WORN_CHECKED", "SOIL_CHECKED", isAvailable);
+
+        // UscoreResult 의 inspectionStatus 도 업데이트 (대기 리스트에서 제외되도록)
+        uscoreResultRepository.findByBookBookId(book.getBookId()).ifPresent(uscore -> {
+            uscore.updateInspectionStatus(isAvailable ? 
+                com.example.yoohoo_be.dashboard.domain.InspectionStatus.PASS : 
+                com.example.yoohoo_be.dashboard.domain.InspectionStatus.FAIL);
+        });
 
         return savedBatch.getId();
     }
