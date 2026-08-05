@@ -12,7 +12,9 @@ import com.example.yoohoo_be.checklists.dto.DecisionConfirmRequestDto;
 import com.example.yoohoo_be.checklists.dto.DecisionConfirmResponseDto;
 import com.example.yoohoo_be.checklists.exception.InvalidRequestException;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
+import com.example.yoohoo_be.dashboard.domain.Library;
 import com.example.yoohoo_be.dashboard.repository.BookRepository;
+import com.example.yoohoo_be.dashboard.repository.LibraryRepository;
 import com.example.yoohoo_be.checklists.repository.CheckItemRepository;
 import com.example.yoohoo_be.common.exception.DuplicateResourceException;
 import com.example.yoohoo_be.common.exception.ResourceNotFoundException;
@@ -32,12 +34,18 @@ public class BookCheckService {
     private final BookRepository bookRepository;
     private final BookCheckBatchRepository bookCheckBatchRepository;
     private final CheckItemRepository checkItemRepository;
+    private final LibraryRepository libraryRepository;
 
     private static final Map<String, BookStatus> DECISION_TO_STATUS = Map.of(
             "DISPOSAL", BookStatus.DISCARDED,
             "RELOCATION", BookStatus.TRANSFERRED,
             "KEEP", BookStatus.PRESERVED
     );
+
+    // 도서관법 시행령 [별표 7] 제3호: 도서관자료의 폐기 및 제적의 범위는
+    // 연간 해당 도서관 전체 장서의 100분의 7을 초과할 수 없다.
+    private static final double DISCARD_CAP_RATIO = BookWearStatusService.DISCARD_CAP_RATIO;
+    private static final String TARGET_LIBRARY_NAME = BookWearStatusService.TARGET_LIBRARY_NAME;
 
     /**
      * 1. 점검 결과 최초 등록 (POST)
@@ -145,6 +153,12 @@ public class BookCheckService {
                         "존재하지 않는 점검 결과입니다. id=" + resultBatchId));
 
         BookStatus mappedStatus = mapDecisionToBookStatus(requestDto.getDecision());
+
+        if (mappedStatus == BookStatus.DISCARDED) {
+            long currentDiscarded = bookRepository.countByStatus(BookStatus.DISCARDED);
+            validateDiscardQuota(currentDiscarded + 1);
+        }
+
         batch.getBook().decideFinalDisposition(mappedStatus);
 
         return DecisionConfirmResponseDto.builder()
@@ -157,9 +171,15 @@ public class BookCheckService {
     /**
      * 5. [신규] 폐기/이관/보존 결정 일괄 확정
      * [PUT] /api/checklists/results/decisions
+     *
+     * 일괄 확정 중 DISPOSAL(폐기) 건은 처리 순서대로 누적 카운트하며 매 건마다
+     * 연간 폐기 상한(전체 장서의 7%)을 검증한다. 상한을 넘는 시점부터는 요청 전체를
+     * 거부하여, 상한 초과 건이 일부만 저장되는 일이 없도록 한다.
      */
     @Transactional
     public List<DecisionConfirmResponseDto> confirmBulkDecisions(BulkDecisionRequestDto requestDto) {
+        long[] runningDiscardedCount = { bookRepository.countByStatus(BookStatus.DISCARDED) };
+
         return requestDto.getItems().stream()
                 .map(item -> {
                     BookCheckBatch batch = bookCheckBatchRepository.findById(item.getResultBatchId())
@@ -167,6 +187,12 @@ public class BookCheckService {
                                     "존재하지 않는 점검 결과입니다. id=" + item.getResultBatchId()));
 
                     BookStatus mappedStatus = mapDecisionToBookStatus(item.getDecision());
+
+                    if (mappedStatus == BookStatus.DISCARDED) {
+                        runningDiscardedCount[0]++;
+                        validateDiscardQuota(runningDiscardedCount[0]);
+                    }
+
                     batch.getBook().decideFinalDisposition(mappedStatus);
 
                     return DecisionConfirmResponseDto.builder()
@@ -176,6 +202,25 @@ public class BookCheckService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 도서관법 시행령 [별표 7] 제3호에 따른 연간 폐기 상한(전체 장서 × 7%) 검증.
+     * projectedDiscardedCount(이번 건 포함 예상 폐기 누적 건수)가 상한을 넘으면 처리를 거부한다.
+     */
+    private void validateDiscardQuota(long projectedDiscardedCount) {
+        Library library = libraryRepository.findByLibraryName(TARGET_LIBRARY_NAME)
+                .orElseThrow(() -> new ResourceNotFoundException(TARGET_LIBRARY_NAME + " 정보를 찾을 수 없습니다."));
+
+        int totalBooks = library.getTotalBooks() != null ? library.getTotalBooks() : 0;
+        long capCount = (long) Math.floor(totalBooks * DISCARD_CAP_RATIO);
+
+        if (projectedDiscardedCount > capCount) {
+            throw new InvalidRequestException(String.format(
+                    "연간 폐기 상한을 초과하여 처리할 수 없습니다. (도서관법 시행령 [별표7] 제3호: 전체 장서의 100분의 7 이내) " +
+                            "전체 장서 %d권 기준 상한 %d권이며, 이번 처리 시 누적 폐기 건수는 %d권이 됩니다.",
+                    totalBooks, capCount, projectedDiscardedCount));
+        }
     }
 
     private BookStatus mapDecisionToBookStatus(String decision) {
