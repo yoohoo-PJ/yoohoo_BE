@@ -19,6 +19,7 @@ public class BookCheckCompletedListResponseDto {
     private String isbn;            // 도서 ISBN
     private String kdcCode;         // KDC 코드
     private String kdcClass;        // KDC 분류기호
+    private String genre;           // 장르 (KDC 변환 문자열)
     private String callNumber;      // 청구기호
     private String coverUrl;        // 도서 표지 이미지 URL
     private String checkedDate;     // 점검 날짜 (YYYY-MM-DD)

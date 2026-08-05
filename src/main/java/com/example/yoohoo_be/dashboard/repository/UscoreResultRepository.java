@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UscoreResultRepository extends JpaRepository<UscoreResult, Long> {
     
+    java.util.Optional<UscoreResult> findByBookBookId(Integer bookId);
+
     @Query("SELECT COUNT(u) FROM UscoreResult u WHERE u.library.libraryId = :libraryId AND u.isIdle = true")
     long countByLibraryAndIsIdle(@Param("libraryId") Integer libraryId);
 

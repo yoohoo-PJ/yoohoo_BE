@@ -60,6 +60,7 @@ public class BookWearStatusService {
                 .isbn(batch.getBook().getIsbn())
                 .kdcCode(batch.getBook().getKdcCode())
                 .kdcClass(batch.getBook().getKdcClass())
+                .genre(convertKdcToGenre(batch.getBook().getKdcClass()))
                 .callNumber(batch.getBook().getCallNumber())
                 .coverUrl(batch.getBook().getCoverUrl())
                 .status(batch.getBook().getStatus().name())
@@ -156,6 +157,7 @@ public class BookWearStatusService {
                 .isbn(book.getIsbn())
                 .kdcCode(book.getKdcCode())
                 .kdcClass(book.getKdcClass())
+                .genre(convertKdcToGenre(book.getKdcClass()))
                 .callNumber(book.getCallNumber())
                 .coverUrl(book.getCoverUrl())
                 .checkedDate(batch.getCheckedDate())
@@ -163,5 +165,20 @@ public class BookWearStatusService {
                 .totalScore(batch.getTotalScore())
                 .status(book.getStatus().name())
                 .build();
+    }
+
+    private String convertKdcToGenre(String kdcClass) {
+        if (kdcClass == null) return "미분류";
+        if (kdcClass.startsWith("0")) return "총류";
+        if (kdcClass.startsWith("1")) return "철학";
+        if (kdcClass.startsWith("2")) return "종교";
+        if (kdcClass.startsWith("3")) return "사회과학";
+        if (kdcClass.startsWith("4")) return "자연과학";
+        if (kdcClass.startsWith("5")) return "기술과학";
+        if (kdcClass.startsWith("6")) return "예술";
+        if (kdcClass.startsWith("7")) return "언어";
+        if (kdcClass.startsWith("8")) return "문학";
+        if (kdcClass.startsWith("9")) return "역사";
+        return "미분류";
     }
 }
