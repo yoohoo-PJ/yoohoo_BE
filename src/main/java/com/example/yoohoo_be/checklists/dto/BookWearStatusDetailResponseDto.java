@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 @Getter
@@ -45,7 +46,10 @@ public class BookWearStatusDetailResponseDto {
     public static class CheckResultItemDto {
         private Long checkItemId;
         private String title;
+        
+        @JsonProperty("isPassed")
         private Boolean isPassed;
+        
         private Integer itemScore;
         private String note;
     }

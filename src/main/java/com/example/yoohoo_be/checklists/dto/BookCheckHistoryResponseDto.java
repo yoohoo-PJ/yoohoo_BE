@@ -1,5 +1,6 @@
 package com.example.yoohoo_be.checklists.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -23,6 +24,7 @@ public class BookCheckHistoryResponseDto {
         private String title;      // 점검 항목 제목
         private String category;   // 점검 카테고리 (예: BOOK, COVER 등)
         private String description;// 점검 상세 설명
+        @JsonProperty("isPassed")
         private Boolean isPassed;  // 통과 여부 (true: 통과, false: 불량)
         private String note;       // 특이사항 메모
     }

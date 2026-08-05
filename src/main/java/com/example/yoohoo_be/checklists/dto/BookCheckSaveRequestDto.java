@@ -1,5 +1,6 @@
 package com.example.yoohoo_be.checklists.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,6 +39,7 @@ public class BookCheckSaveRequestDto {
         private Long checkItemId; // 점검 항목 ID
 
         @NotNull(message = "통과 여부는 필수 항목입니다.")
+        @JsonProperty("isPassed")
         private Boolean isPassed; // 통과 여부
 
         private Integer itemScore; // 해당 항목 판정 점수
