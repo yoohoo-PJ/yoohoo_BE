@@ -4,6 +4,7 @@ import com.example.yoohoo_be.dashboard.domain.Book;
 import com.example.yoohoo_be.checklists.domain.BookCheckBatch;
 import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import com.example.yoohoo_be.dashboard.domain.Library;
+import com.example.yoohoo_be.dashboard.domain.LibraryMonthlyStats;
 import com.example.yoohoo_be.checklists.dto.BookCheckCompletedListResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookSummaryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookWearStatusDetailResponseDto;
@@ -13,6 +14,7 @@ import com.example.yoohoo_be.common.exception.ResourceNotFoundException;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
 import com.example.yoohoo_be.dashboard.repository.BookRepository;
 import com.example.yoohoo_be.dashboard.repository.LibraryRepository;
+import com.example.yoohoo_be.dashboard.repository.LibraryMonthlyStatsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class BookWearStatusService {
     private final BookCheckBatchRepository bookCheckBatchRepository;
     private final BookRepository bookRepository; // [추가됨] 폐기/이관/보존 결정 및 상태별 목록 조회용
     private final LibraryRepository libraryRepository;
+    private final LibraryMonthlyStatsRepository monthlyStatsRepository;
 
     // 도서관법 시행령 [별표 7] 제3호: 도서관자료의 폐기 및 제적의 범위는 연간 전체 장서의 100분의 7을 초과할 수 없다.
     public static final double DISCARD_CAP_RATIO = 0.07;
@@ -126,12 +129,17 @@ public class BookWearStatusService {
 
     /**
      * 도서관법 시행령 [별표 7] 제3호 기준 연간 폐기 상한(전체 장서 × 7%) 현황을 계산한다.
+     * 전체 장서 수(totalBooks)는 개요 화면의 "소장 도서 수"와 동일하게, 해당 도서관의
+     * 가장 최근 월별 통계(LibraryMonthlyStats)의 total_books 값을 기준으로 한다.
      */
     public DiscardQuotaDto calculateDiscardQuota() {
         Library library = libraryRepository.findByLibraryName(TARGET_LIBRARY_NAME)
                 .orElseThrow(() -> new ResourceNotFoundException(TARGET_LIBRARY_NAME + " 정보를 찾을 수 없습니다."));
 
-        int totalBooks = library.getTotalBooks() != null ? library.getTotalBooks() : 0;
+        LibraryMonthlyStats latestStats = monthlyStatsRepository.findTopByLibraryOrderByStatYearDescStatMonthDesc(library)
+                .orElseThrow(() -> new ResourceNotFoundException(TARGET_LIBRARY_NAME + "의 월별 통계 정보를 찾을 수 없습니다."));
+
+        int totalBooks = latestStats.getTotalBooks() != null ? latestStats.getTotalBooks() : 0;
         long discardedCount = bookRepository.countByStatus(BookStatus.DISCARDED);
         long capCount = (long) Math.floor(totalBooks * DISCARD_CAP_RATIO);
         long remaining = Math.max(0, capCount - discardedCount);
