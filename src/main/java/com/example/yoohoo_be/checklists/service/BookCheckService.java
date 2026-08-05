@@ -1,6 +1,3 @@
-// Fix 브랜치(7% 폐기 상한 기능) + master 브랜치(UscoreResult 리팩터링)를 합친 최종 결과입니다.
-// IntelliJ 병합 화면에서 이 내용과 최종적으로 같아지면 정리가 끝난 것입니다.
-
 package com.example.yoohoo_be.checklists.service;
 
 import com.example.yoohoo_be.dashboard.domain.Book;

@@ -1,5 +1,3 @@
-// Fix 브랜치(7% 폐기 상한 기능) + master 브랜치(genre 필드 추가) 를 합친 최종 결과입니다.
-
 package com.example.yoohoo_be.checklists.service;
 
 import com.example.yoohoo_be.dashboard.domain.Book;
@@ -184,4 +182,3 @@ public class BookWearStatusService {
         return "미분류";
     }
 }
- 
