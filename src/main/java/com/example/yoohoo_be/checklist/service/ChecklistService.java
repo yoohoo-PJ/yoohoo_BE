@@ -27,6 +27,7 @@ public class ChecklistService {
 
         return results.map(u -> DamagePendingListDto.builder()
                 .resultId(u.getResultId())
+                .bookId(u.getBook() != null ? u.getBook().getBookId() : null)
                 .bookTitle(u.getBook() != null ? u.getBook().getTitle() : null)
                 .author(u.getBook() != null ? u.getBook().getAuthor() : null)
                 .genre(convertKdcToGenre(u.getBook() != null ? u.getBook().getKdcClass() : null))
@@ -49,6 +50,7 @@ public class ChecklistService {
         
         java.util.List<DamagePendingListDto> dtoList = demoBooks.stream().map(u -> DamagePendingListDto.builder()
                 .resultId(u.getResultId())
+                .bookId(u.getBook() != null ? u.getBook().getBookId() : null)
                 .bookTitle(u.getBook() != null ? u.getBook().getTitle() : null)
                 .author(u.getBook() != null ? u.getBook().getAuthor() : null)
                 .genre(convertKdcToGenre(u.getBook() != null ? u.getBook().getKdcClass() : null))

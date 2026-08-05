@@ -13,8 +13,10 @@ import java.util.List;
 @NoArgsConstructor
 public class BookCheckSaveRequestDto {
 
-    @NotNull(message = "점검 대상 도서 ID는 필수 항목입니다.")
+    @NotNull(message = "점검 대상 도서 ID(resultId)는 필수 값입니다.")
     private Integer resultId; // 점검 대상 도서 ID (이전 bookId)
+
+    private Integer bookId; // 새로 추가된 실제 bookId
 
     @NotBlank(message = "사서/담당자 코드는 필수 항목입니다.")
     private String librarianCode; // 담당 사서 코드

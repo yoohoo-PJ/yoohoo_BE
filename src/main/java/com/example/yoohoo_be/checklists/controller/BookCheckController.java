@@ -37,6 +37,7 @@ public class BookCheckController {
 
         Map<String, Object> data = new HashMap<>();
         data.put("resultBatchId", resultBatchId);
+        data.put("bookId", requestDto.getBookId());
         data.put("totalScore", requestDto.getTotalScore());
         data.put("checkedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 
