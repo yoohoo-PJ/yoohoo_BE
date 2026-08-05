@@ -2,6 +2,7 @@ package com.example.yoohoo_be.checklists.service;
 
 import com.example.yoohoo_be.dashboard.domain.Book;
 import com.example.yoohoo_be.dashboard.domain.BookStatus;
+import com.example.yoohoo_be.dashboard.domain.UscoreResult;
 import com.example.yoohoo_be.checklists.domain.BookCheckBatch;
 import com.example.yoohoo_be.checklists.domain.BookCheckResultItem;
 import com.example.yoohoo_be.checklists.domain.CheckItem;
@@ -46,8 +47,9 @@ public class BookCheckService {
      */
     @Transactional
     public Long createBookCheckResult(BookCheckSaveRequestDto requestDto) {
-        Book book = bookRepository.findById(requestDto.getResultId())
-                .orElseThrow(() -> new ResourceNotFoundException("해당 도서를 찾을 수 없습니다. id=" + requestDto.getResultId()));
+        UscoreResult uscore = uscoreResultRepository.findById(requestDto.getResultId().longValue())
+                .orElseThrow(() -> new ResourceNotFoundException("해당 유휴도서 결과를 찾을 수 없습니다. resultId=" + requestDto.getResultId()));
+        Book book = uscore.getBook();
 
         if (book.getStatus() == BookStatus.IN_PROGRESS) {
             throw new DuplicateResourceException("이미 등록된 점검 결과입니다.");

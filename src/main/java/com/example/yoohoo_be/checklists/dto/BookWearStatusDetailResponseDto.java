@@ -34,6 +34,7 @@ public class BookWearStatusDetailResponseDto {
         private String isbn;
         private String kdcCode;
         private String kdcClass;
+        private String genre;
         private String callNumber;
         private String coverUrl;
         private String status;
