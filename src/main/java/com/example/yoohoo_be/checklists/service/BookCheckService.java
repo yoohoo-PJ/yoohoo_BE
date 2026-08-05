@@ -82,11 +82,9 @@ public class BookCheckService {
         book.completeCheckAndMoveToInProgress("WORN_CHECKED", "SOIL_CHECKED", isAvailable);
 
         // UscoreResult 의 inspectionStatus 도 업데이트 (대기 리스트에서 제외되도록)
-        uscoreResultRepository.findByBookBookId(book.getBookId()).ifPresent(uscore -> {
-            uscore.updateInspectionStatus(isAvailable ? 
-                com.example.yoohoo_be.dashboard.domain.InspectionStatus.PASS : 
-                com.example.yoohoo_be.dashboard.domain.InspectionStatus.FAIL);
-        });
+        uscore.updateInspectionStatus(isAvailable ? 
+            com.example.yoohoo_be.dashboard.domain.InspectionStatus.PASS : 
+            com.example.yoohoo_be.dashboard.domain.InspectionStatus.FAIL);
 
         return savedBatch.getId();
     }
