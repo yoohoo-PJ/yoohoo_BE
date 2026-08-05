@@ -9,6 +9,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class DamagePendingListDto {
     private Long resultId;
+    private Integer bookId;
     private String bookTitle;
     private String author;
     private String genre;
