@@ -2,10 +2,12 @@ package com.example.yoohoo_be.checklists.service;
 
 import com.example.yoohoo_be.dashboard.domain.Book;
 import com.example.yoohoo_be.checklists.domain.BookCheckBatch;
+import com.example.yoohoo_be.dashboard.domain.BookSnapshot;
 import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import com.example.yoohoo_be.dashboard.domain.Library;
 import com.example.yoohoo_be.dashboard.domain.LibraryMonthlyStats;
 import com.example.yoohoo_be.checklists.dto.BookCheckCompletedListResponseDto;
+import com.example.yoohoo_be.checklists.dto.BookMonthlyLoanPointDto;
 import com.example.yoohoo_be.checklists.dto.BookSummaryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookWearStatusDetailResponseDto;
 import com.example.yoohoo_be.checklists.dto.DiscardQuotaDto;
@@ -13,6 +15,7 @@ import com.example.yoohoo_be.checklists.dto.DiscardedBookListResponseDto;
 import com.example.yoohoo_be.common.exception.ResourceNotFoundException;
 import com.example.yoohoo_be.checklists.repository.BookCheckBatchRepository;
 import com.example.yoohoo_be.dashboard.repository.BookRepository;
+import com.example.yoohoo_be.dashboard.repository.BookSnapshotRepository;
 import com.example.yoohoo_be.dashboard.repository.LibraryRepository;
 import com.example.yoohoo_be.dashboard.repository.LibraryMonthlyStatsRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,6 +36,7 @@ public class BookWearStatusService {
     private final BookRepository bookRepository; // [추가됨] 폐기/이관/보존 결정 및 상태별 목록 조회용
     private final LibraryRepository libraryRepository;
     private final LibraryMonthlyStatsRepository monthlyStatsRepository;
+    private final BookSnapshotRepository bookSnapshotRepository;
 
     // 도서관법 시행령 [별표 7] 제3호: 도서관자료의 폐기 및 제적의 범위는 연간 전체 장서의 100분의 7을 초과할 수 없다.
     public static final double DISCARD_CAP_RATIO = 0.07;
@@ -152,6 +157,44 @@ public class BookWearStatusService {
                 .remaining(remaining)
                 .capReached(discardedCount >= capCount)
                 .build();
+    }
+
+    /**
+     * 6. [신규] 특정 도서의 최근 12개월 월별 대출 추이 조회
+     * [GET] /api/checklists/books/{bookId}/loans/monthly
+
+     * book_snapshots에는 매달 시점의 "누적 대출건수"가 저장돼 있으므로,
+     * 이번 달 대출 건수 = 이번 달 누적값 - 지난 달 누적값 (음수가 나오면 0으로 처리 — 카운터 리셋 등 예외 상황 방어).
+     */
+    public List<BookMonthlyLoanPointDto> getMonthlyLoanTrend(Integer bookId) {
+        List<BookSnapshot> snapshots =
+                bookSnapshotRepository.findAllByBookBookIdOrderBySnapshotYearAscSnapshotMonthAsc(bookId);
+
+        List<BookMonthlyLoanPointDto> result = new ArrayList<>();
+        for (int i = 1; i < snapshots.size(); i++) {
+            BookSnapshot prev = snapshots.get(i - 1);
+            BookSnapshot curr = snapshots.get(i);
+
+            int prevCount = prev.getCumulativeLoanCount() != null ? prev.getCumulativeLoanCount() : 0;
+            int currCount = curr.getCumulativeLoanCount() != null ? curr.getCumulativeLoanCount() : 0;
+            int delta = Math.max(0, currCount - prevCount);
+
+            // curr 시점 스냅샷과 prev 시점 스냅샷의 차이(delta)는 "prev월 말 ~ curr월 말" 사이에 일어난 대출 건수다.
+            // 즉 이 증가분은 prev월 한 달 동안의 대출량에 가장 가깝다고 보고, curr월이 아닌 prev월로 라벨링한다.
+            // (예: 2025.07 스냅샷과 2025.08 스냅샷의 차이 -> "25.07"로 표시)
+            String monthLabel = String.format("%02d.%02d", prev.getSnapshotYear() % 100, prev.getSnapshotMonth());
+
+            result.add(BookMonthlyLoanPointDto.builder()
+                    .month(monthLabel)
+                    .v(delta)
+                    .build());
+        }
+
+        // 최근 12개월치만 반환 (그보다 스냅샷이 더 쌓여있어도 차트는 12개월 고정)
+        if (result.size() > 12) {
+            result = result.subList(result.size() - 12, result.size());
+        }
+        return result;
     }
 
     private BookCheckCompletedListResponseDto toCompletedListDto(BookCheckBatch batch) {
