@@ -31,10 +31,16 @@ public class TransferController {
     }
 
     @PostMapping("/{recommendationId}/execute")
-    public ResponseEntity<Void> executeTransfer(
+    public ResponseEntity<java.util.Map<String, Object>> executeTransfer(
             @PathVariable(name = "recommendationId") Long recommendationId) {
         
         transferService.executeTransfer(recommendationId);
-        return ResponseEntity.ok().build();
+        
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("success", true);
+        response.put("message", "도서 이관 처리가 완료되었습니다.");
+        response.put("newStatus", "IN_TRANSIT");
+        
+        return ResponseEntity.ok(response);
     }
 }
