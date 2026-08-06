@@ -22,10 +22,34 @@ public class ChecklistService {
     private final LibraryRepository libraryRepository;
 
     public Page<DamagePendingListDto> getDamagePendingPage(String keyword, String genre, String sortOrder, Pageable pageable) {
-        /*
-        Page<UscoreResult> results = uscoreResultRepository.findDamagePendingPage(pageable);
 
-        return results.map(u -> DamagePendingListDto.builder()
+        String kdcPrefix = null;
+        if (genre != null && !genre.trim().isEmpty() && !"기타".equals(genre.trim())) {
+            switch (genre.trim()) {
+                case "총류": kdcPrefix = "0"; break;
+                case "철학": kdcPrefix = "1"; break;
+                case "종교": kdcPrefix = "2"; break;
+                case "사회과학": kdcPrefix = "3"; break;
+                case "자연과학": kdcPrefix = "4"; break;
+                case "기술과학": kdcPrefix = "5"; break;
+                case "예술": kdcPrefix = "6"; break;
+                case "언어": kdcPrefix = "7"; break;
+                case "문학": kdcPrefix = "8"; break;
+                case "역사": kdcPrefix = "9"; break;
+            }
+        }
+
+        String safeKeyword = (keyword == null || keyword.trim().isEmpty()) ? null : keyword.trim();
+
+        org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "uScore");
+        if ("ASC".equalsIgnoreCase(sortOrder)) {
+            sort = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "uScore");
+        }
+        Pageable sortedPageable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+
+        Page<UscoreResult> resultsPage = uscoreResultRepository.findDamagePendingWithFilters(safeKeyword, kdcPrefix, sortedPageable);
+
+        return resultsPage.map(u -> DamagePendingListDto.builder()
                 .resultId(u.getResultId())
                 .bookId(u.getBook() != null ? u.getBook().getBookId() : null)
                 .bookTitle(u.getBook() != null ? u.getBook().getTitle() : null)
@@ -37,53 +61,6 @@ public class ChecklistService {
                 .sLoan(u.getSLoan())
                 .sDecay(u.getSDecay())
                 .build());
-        */
-
-        // 유휴화 분류된 전체 데이터 로드
-        java.util.List<UscoreResult> demoBooks = uscoreResultRepository.findDamagePendingPage(
-                org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).getContent();
-
-        java.util.List<DamagePendingListDto> dtoList = demoBooks.stream().map(u -> DamagePendingListDto.builder()
-                .resultId(u.getResultId())
-                .bookId(u.getBook() != null ? u.getBook().getBookId() : null)
-                .bookTitle(u.getBook() != null ? u.getBook().getTitle() : null)
-                .author(u.getBook() != null ? u.getBook().getAuthor() : null)
-                .genre(convertKdcToGenre(u.getBook() != null ? u.getBook().getKdcClass() : null))
-                .isbn(u.getBook() != null ? u.getBook().getIsbn() : null)
-                .idleScore(u.getUScore())
-                .sAge(u.getSAge())
-                .sLoan(u.getSLoan())
-                .sDecay(u.getSDecay())
-                .build()).collect(java.util.stream.Collectors.toList());
-
-        // 1. Keyword 필터링 (제목 또는 ISBN)
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            String lowerKeyword = keyword.trim().toLowerCase();
-            dtoList = dtoList.stream()
-                    .filter(dto -> (dto.getBookTitle() != null && dto.getBookTitle().toLowerCase().contains(lowerKeyword)) ||
-                                   (dto.getIsbn() != null && dto.getIsbn().toLowerCase().contains(lowerKeyword)))
-                    .collect(java.util.stream.Collectors.toList());
-        }
-
-        // 2. 장르 필터링
-        if (genre != null && !genre.trim().isEmpty()) {
-            dtoList = dtoList.stream()
-                    .filter(dto -> genre.trim().equals(dto.getGenre()))
-                    .collect(java.util.stream.Collectors.toList());
-        }
-
-        // 3. 점수 정렬
-        if ("ASC".equalsIgnoreCase(sortOrder)) {
-            dtoList.sort(java.util.Comparator.comparing(DamagePendingListDto::getIdleScore, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
-        } else if ("DESC".equalsIgnoreCase(sortOrder)) {
-            dtoList.sort(java.util.Comparator.comparing(DamagePendingListDto::getIdleScore, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
-        }
-                
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), dtoList.size());
-        java.util.List<DamagePendingListDto> subList = start > dtoList.size() ? new java.util.ArrayList<>() : dtoList.subList(start, end);
-        
-        return new org.springframework.data.domain.PageImpl<>(subList, pageable, dtoList.size());
     }
 
     private String convertKdcToGenre(String kdcClass) {
@@ -122,7 +99,8 @@ public class ChecklistService {
 
         uscoreResultRepository.updateCalcDateForIdleBooks(origin.getLibraryId(), LocalDate.now());
 
-        java.util.List<com.example.yoohoo_be.dashboard.domain.UscoreResult> idleBooks = uscoreResultRepository.findIdleBooksByLibrary(origin.getLibraryId());
+        org.springframework.data.domain.Pageable limit = org.springframework.data.domain.PageRequest.of(0, 100, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "uScore"));
+        java.util.List<com.example.yoohoo_be.dashboard.domain.UscoreResult> idleBooks = uscoreResultRepository.findIdleBooksByScoreRange(origin.getLibraryId(), 0.0, 101.0, limit);
 
         java.util.List<AlgorithmRunResponseDto.IdleBookDto> idleBookDtos = idleBooks.stream()
                 .map(u -> AlgorithmRunResponseDto.IdleBookDto.builder()
