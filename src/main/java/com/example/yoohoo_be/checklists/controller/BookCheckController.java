@@ -91,7 +91,7 @@ public class BookCheckController {
      */
     @PutMapping("/results/{resultBatchId}/decision")
     public ResponseEntity<Map<String, Object>> confirmDecision(
-            @PathVariable Long resultBatchId,
+            @PathVariable("resultBatchId") Long resultBatchId,
             @Valid @RequestBody DecisionConfirmRequestDto requestDto) {
 
         DecisionConfirmResponseDto data = bookCheckService.confirmDecision(resultBatchId, requestDto);
