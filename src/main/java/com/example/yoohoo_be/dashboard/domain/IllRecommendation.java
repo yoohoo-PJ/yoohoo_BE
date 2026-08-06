@@ -1,6 +1,8 @@
 package com.example.yoohoo_be.dashboard.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,7 +12,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "ill_recommendations")
 @Getter
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class IllRecommendation {
 
     @Id
@@ -58,6 +62,7 @@ public class IllRecommendation {
     @Setter
     @Enumerated(EnumType.STRING)
     @Column(name = "transfer_status")
+    @Builder.Default
     private TransferStatus transferStatus = TransferStatus.NONE;
 
     @Setter

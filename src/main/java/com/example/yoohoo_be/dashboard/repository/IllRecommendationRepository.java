@@ -36,4 +36,8 @@ public interface IllRecommendationRepository extends JpaRepository<IllRecommenda
     int countByTransferStatusInAndOriginLibrary_LibraryId(List<TransferStatus> transferStatuses, Integer libraryId);
 
     int countByTransferStatusInAndDestLibrary_LibraryId(List<TransferStatus> transferStatuses, Integer libraryId);
+
+    void deleteByBook_BookId(Integer bookId);
+
+    List<IllRecommendation> findByBook_BookIdOrderByRankAsc(Integer bookId);
 }
