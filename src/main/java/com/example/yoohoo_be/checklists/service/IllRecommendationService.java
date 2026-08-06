@@ -204,7 +204,7 @@ public class IllRecommendationService {
      * 목적지 도서관의 해당 KDC 장르 대출 비율 × 100
      */
     private double calculateDemandScore(Integer libraryId, String kdcClass) {
-        return libraryKdcStatRepository.findByLibrary_LibraryIdAndKdcClass(libraryId, kdcClass)
+        return libraryKdcStatRepository.findFirstByLibrary_LibraryIdAndKdcClass(libraryId, kdcClass)
                 .map(stat -> stat.getLoanRatio() != null
                         ? stat.getLoanRatio().doubleValue() * 100.0
                         : 0.0)
@@ -216,7 +216,7 @@ public class IllRecommendationService {
      * 100 × max(0, (대출비율 - 소장비율) / 대출비율)
      */
     private double calculateGapScore(Integer libraryId, String kdcClass) {
-        return libraryKdcStatRepository.findByLibrary_LibraryIdAndKdcClass(libraryId, kdcClass)
+        return libraryKdcStatRepository.findFirstByLibrary_LibraryIdAndKdcClass(libraryId, kdcClass)
                 .map(stat -> {
                     // demand_supply_gap 컬럼이 이미 계산되어 있으면 활용
                     if (stat.getDemandSupplyGap() != null) {
