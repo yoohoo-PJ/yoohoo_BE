@@ -39,15 +39,10 @@ public class ChecklistService {
                 .build());
         */
 
-        // 데모용 응답: 100점대 100권, 90점대 100권, 80점대 100권, 70점대 100권
-        java.util.List<UscoreResult> demoBooks = new java.util.ArrayList<>();
-        org.springframework.data.domain.Pageable limit = org.springframework.data.domain.PageRequest.of(0, 100); 
-        
-        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(100.0, 101.0, limit));
-        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(90.0, 100.0, limit));
-        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(80.0, 90.0, limit));
-        demoBooks.addAll(uscoreResultRepository.findDamagePendingByScoreRange(70.0, 80.0, limit));
-        
+        // 유휴화 분류된 전체 데이터 로드
+        java.util.List<UscoreResult> demoBooks = uscoreResultRepository.findDamagePendingPage(
+                org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).getContent();
+
         java.util.List<DamagePendingListDto> dtoList = demoBooks.stream().map(u -> DamagePendingListDto.builder()
                 .resultId(u.getResultId())
                 .bookId(u.getBook() != null ? u.getBook().getBookId() : null)
@@ -127,15 +122,7 @@ public class ChecklistService {
 
         uscoreResultRepository.updateCalcDateForIdleBooks(origin.getLibraryId(), LocalDate.now());
 
-        // java.util.List<com.example.yoohoo_be.dashboard.domain.UscoreResult> idleBooks = uscoreResultRepository.findIdleBooksByLibrary(origin.getLibraryId());
-        
-        java.util.List<com.example.yoohoo_be.dashboard.domain.UscoreResult> idleBooks = new java.util.ArrayList<>();
-        org.springframework.data.domain.Pageable limit = org.springframework.data.domain.PageRequest.of(0, 10); // 각 점수대별 10권씩
-        
-        idleBooks.addAll(uscoreResultRepository.findIdleBooksByScoreRange(origin.getLibraryId(), 100.0, 101.0, limit));
-        idleBooks.addAll(uscoreResultRepository.findIdleBooksByScoreRange(origin.getLibraryId(), 90.0, 100.0, limit));
-        idleBooks.addAll(uscoreResultRepository.findIdleBooksByScoreRange(origin.getLibraryId(), 80.0, 90.0, limit));
-        idleBooks.addAll(uscoreResultRepository.findIdleBooksByScoreRange(origin.getLibraryId(), 70.0, 80.0, limit));
+        java.util.List<com.example.yoohoo_be.dashboard.domain.UscoreResult> idleBooks = uscoreResultRepository.findIdleBooksByLibrary(origin.getLibraryId());
 
         java.util.List<AlgorithmRunResponseDto.IdleBookDto> idleBookDtos = idleBooks.stream()
                 .map(u -> AlgorithmRunResponseDto.IdleBookDto.builder()
