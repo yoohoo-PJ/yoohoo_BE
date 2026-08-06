@@ -12,5 +12,5 @@ public interface LibraryKdcStatRepository extends JpaRepository<LibraryKdcStat, 
 
     List<LibraryKdcStat> findByLibrary_LibraryId(Integer libraryId);
 
-    Optional<LibraryKdcStat> findByLibrary_LibraryIdAndKdcClass(Integer libraryId, String kdcClass);
+    Optional<LibraryKdcStat> findFirstByLibrary_LibraryIdAndKdcClass(Integer libraryId, String kdcClass);
 }
