@@ -168,9 +168,8 @@ public class BookCheckService {
             validateDiscardQuota(currentDiscarded + 1);
         }
 
-        batch.getBook().decideFinalDisposition(mappedStatus);
-
-        // 이관(RELOCATION) 결정 시 상호대차 추천 알고리즘 실행
+        // 이관(RELOCATION) 결정 시 상호대차 추천 알고리즘 먼저 실행
+        // (X-Lock 점유 전 실행하여 REQUIRES_NEW 내부 트랜잭션과의 DB 데드락 방지)
         if (mappedStatus == BookStatus.TRANSFERRED) {
             try {
                 illRecommendationService.generateRecommendations(batch.getBook());
@@ -179,6 +178,9 @@ public class BookCheckService {
                         batch.getBook().getBookId(), e.getMessage());
             }
         }
+
+        // 마지막에 상태 업데이트 (이 시점에 Book 테이블 레코드에 X-Lock이 걸림)
+        batch.getBook().decideFinalDisposition(mappedStatus);
 
         return DecisionConfirmResponseDto.builder()
                 .resultBatchId(batch.getId())
@@ -212,9 +214,8 @@ public class BookCheckService {
                         validateDiscardQuota(runningDiscardedCount[0]);
                     }
 
-                    batch.getBook().decideFinalDisposition(mappedStatus);
-
-                    // 이관(RELOCATION) 결정 시 상호대차 추천 알고리즘 실행
+                    // 이관(RELOCATION) 결정 시 상호대차 추천 알고리즘 먼저 실행
+                    // (X-Lock 점유 전 실행하여 REQUIRES_NEW 내부 트랜잭션과의 DB 데드락 방지)
                     if (mappedStatus == BookStatus.TRANSFERRED) {
                         try {
                             illRecommendationService.generateRecommendations(batch.getBook());
@@ -223,6 +224,9 @@ public class BookCheckService {
                                     batch.getBook().getBookId(), e.getMessage());
                         }
                     }
+
+                    // 마지막에 상태 업데이트
+                    batch.getBook().decideFinalDisposition(mappedStatus);
 
                     return DecisionConfirmResponseDto.builder()
                             .resultBatchId(batch.getId())
