@@ -33,11 +33,11 @@ public class BookCheckController {
     public ResponseEntity<Map<String, Object>> registerCheckResult(
             @Valid @RequestBody BookCheckSaveRequestDto requestDto) {
 
-        Long resultBatchId = bookCheckService.createBookCheckResult(requestDto);
+        com.example.yoohoo_be.checklists.domain.BookCheckBatch batch = bookCheckService.createBookCheckResult(requestDto);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("resultBatchId", resultBatchId);
-        data.put("bookId", requestDto.getBookId());
+        data.put("resultBatchId", batch.getId());
+        data.put("bookId", batch.getBook().getBookId());
         data.put("totalScore", requestDto.getTotalScore());
         data.put("checkedAt", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 

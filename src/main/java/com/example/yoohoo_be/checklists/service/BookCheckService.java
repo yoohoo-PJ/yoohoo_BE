@@ -20,6 +20,7 @@ import com.example.yoohoo_be.dashboard.repository.UscoreResultRepository;
 import com.example.yoohoo_be.common.exception.DuplicateResourceException;
 import com.example.yoohoo_be.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookCheckService {
@@ -37,6 +39,7 @@ public class BookCheckService {
     private final CheckItemRepository checkItemRepository;
     private final UscoreResultRepository uscoreResultRepository;
     private final BookWearStatusService bookWearStatusService;
+    private final IllRecommendationService illRecommendationService;
 
     private static final Map<String, BookStatus> DECISION_TO_STATUS = Map.of(
             "DISPOSAL", BookStatus.DISCARDED,
@@ -48,7 +51,7 @@ public class BookCheckService {
      * 1. 점검 결과 최초 등록 (POST)
      */
     @Transactional
-    public Long createBookCheckResult(BookCheckSaveRequestDto requestDto) {
+    public BookCheckBatch createBookCheckResult(BookCheckSaveRequestDto requestDto) {
         UscoreResult uscore = uscoreResultRepository.findById(requestDto.getResultId().longValue())
                 .orElseThrow(() -> new ResourceNotFoundException("해당 유휴도서 결과를 찾을 수 없습니다. resultId=" + requestDto.getResultId()));
         Book book = uscore.getBook();
@@ -88,7 +91,7 @@ public class BookCheckService {
                 com.example.yoohoo_be.dashboard.domain.InspectionStatus.PASS :
                 com.example.yoohoo_be.dashboard.domain.InspectionStatus.FAIL);
 
-        return savedBatch.getId();
+        return savedBatch;
     }
 
     /**
@@ -164,6 +167,16 @@ public class BookCheckService {
 
         batch.getBook().decideFinalDisposition(mappedStatus);
 
+        // 이관(RELOCATION) 결정 시 상호대차 추천 알고리즘 실행
+        if (mappedStatus == BookStatus.TRANSFERRED) {
+            try {
+                illRecommendationService.generateRecommendations(batch.getBook());
+            } catch (Exception e) {
+                log.warn("⚠ 상호대차 추천 알고리즘 실행 실패 (bookId={}): {}",
+                        batch.getBook().getBookId(), e.getMessage());
+            }
+        }
+
         return DecisionConfirmResponseDto.builder()
                 .resultBatchId(batch.getId())
                 .decision(requestDto.getDecision())
@@ -197,6 +210,16 @@ public class BookCheckService {
                     }
 
                     batch.getBook().decideFinalDisposition(mappedStatus);
+
+                    // 이관(RELOCATION) 결정 시 상호대차 추천 알고리즘 실행
+                    if (mappedStatus == BookStatus.TRANSFERRED) {
+                        try {
+                            illRecommendationService.generateRecommendations(batch.getBook());
+                        } catch (Exception e) {
+                            log.warn("⚠ 일괄 이관 추천 알고리즘 실행 실패 (bookId={}): {}",
+                                    batch.getBook().getBookId(), e.getMessage());
+                        }
+                    }
 
                     return DecisionConfirmResponseDto.builder()
                             .resultBatchId(batch.getId())
