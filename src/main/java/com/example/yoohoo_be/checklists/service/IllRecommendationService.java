@@ -67,6 +67,12 @@ public class IllRecommendationService {
             return;
         }
         UscoreResult uscore = uscoreOpt.get();
+        
+        // REQUIRES_NEW 트랜잭션이므로 매개변수로 넘어온 book은 detached 상태입니다.
+        // 영속성 컨텍스트(Persistent Context) 충돌(PersistentObjectException)을 방지하기 위해 
+        // 현재 트랜잭션 내에서 관리되는(managed) book 엔티티를 사용합니다.
+        Book managedBook = uscore.getBook();
+
         Library originLib = uscore.getLibrary();
 
         if (originLib.getLatitude() == null || originLib.getLongitude() == null) {
@@ -74,13 +80,13 @@ public class IllRecommendationService {
             return;
         }
 
-        String kdcClass = book.getKdcClass(); // 도서의 KDC 대분류 (예: "8" = 문학)
+        String kdcClass = managedBook.getKdcClass(); // 도서의 KDC 대분류 (예: "8" = 문학)
         if (kdcClass == null || kdcClass.isBlank()) {
             kdcClass = "0"; // KDC 미분류 시 총류로 폴백
         }
 
         // 2. 기존 추천 결과 삭제 (재계산 대비)
-        illRecommendationRepository.deleteByBook_BookId(book.getBookId());
+        illRecommendationRepository.deleteByBook_BookId(managedBook.getBookId());
 
         // 3. 후보 도서관 목록 (출발 도서관 제외)
         List<Library> allCandidates = libraryRepository.findAllByLibraryIdNot(originLib.getLibraryId());
@@ -135,7 +141,7 @@ public class IllRecommendationService {
 
             IllRecommendation rec = IllRecommendation.builder()
                     .uscoreResult(uscore)
-                    .book(book)
+                    .book(managedBook)
                     .originLibrary(originLib)
                     .destLibrary(sc.library())
                     .rank((byte) (i + 1))
@@ -151,7 +157,7 @@ public class IllRecommendationService {
             illRecommendationRepository.save(rec);
         }
 
-        log.info("✅ 추천 완료: bookId={}, 추천 도서관 {}개 저장", book.getBookId(), saveCount);
+        log.info("✅ 추천 완료: bookId={}, 추천 도서관 {}개 저장", managedBook.getBookId(), saveCount);
     }
 
     // ──────────────────────────────────────────────────
