@@ -13,14 +13,8 @@ import java.util.List;
 @NoArgsConstructor
 public class BulkDecisionRequestDto {
 
-    @NotBlank(message = "librarianCode는 필수입니다.")
-    private String librarianCode;
-
-    @NotBlank(message = "decidedDate는 필수입니다.")
-    private String decidedDate;
-
     @Valid
-    @NotEmpty(message = "items는 1건 이상이어야 합니다.")
+    @NotEmpty(message = "items는 1개 이상이어야 합니다.")
     private List<DecisionItemDto> items;
 
     @Getter
