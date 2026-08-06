@@ -5,7 +5,6 @@ import com.example.yoohoo_be.dashboard.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -55,11 +54,14 @@ public class IllRecommendationService {
 
     /**
      * 특정 도서에 대해 상호대차 추천 알고리즘을 실행하고 결과를 DB에 저장합니다.
+     * 호출자(BookCheckService)의 트랜잭션에 참여합니다 (기본 REQUIRED 전파).
      *
-     * @param book 이관 대상 도서
+     * @param book 이관 대상 도서 (호출자 트랜잭션에서 관리되는 managed 엔티티)
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void generateRecommendations(Book book) {
+        log.info("🚀 추천 알고리즘 시작: bookId={}", book.getBookId());
+
         // 1. UscoreResult 조회 → 출발 도서관(origin) 확인
         Optional<UscoreResult> uscoreOpt = uscoreResultRepository.findByBookBookId(book.getBookId());
         if (uscoreOpt.isEmpty()) {
@@ -67,29 +69,39 @@ public class IllRecommendationService {
             return;
         }
         UscoreResult uscore = uscoreOpt.get();
-        
-        // REQUIRES_NEW 트랜잭션이므로 매개변수로 넘어온 book은 detached 상태입니다.
-        // 영속성 컨텍스트(Persistent Context) 충돌(PersistentObjectException)을 방지하기 위해 
-        // 현재 트랜잭션 내에서 관리되는(managed) book 엔티티를 사용합니다.
-        Book managedBook = uscore.getBook();
-
         Library originLib = uscore.getLibrary();
+
+        if (originLib == null) {
+            log.warn("⚠ 출발 도서관(Library) 없음 → 추천 생략. bookId={}", book.getBookId());
+            return;
+        }
+
+        log.info("📌 출발 도서관: id={}, name={}, lat={}, lng={}",
+                originLib.getLibraryId(), originLib.getLibraryName(),
+                originLib.getLatitude(), originLib.getLongitude());
 
         if (originLib.getLatitude() == null || originLib.getLongitude() == null) {
             log.warn("⚠ 출발 도서관 좌표 없음 → 추천 생략. libraryId={}", originLib.getLibraryId());
             return;
         }
 
-        String kdcClass = managedBook.getKdcClass(); // 도서의 KDC 대분류 (예: "8" = 문학)
+        String kdcClass = book.getKdcClass(); // 도서의 KDC 대분류 (예: "8" = 문학)
         if (kdcClass == null || kdcClass.isBlank()) {
             kdcClass = "0"; // KDC 미분류 시 총류로 폴백
         }
+        log.info("📚 도서 KDC 분류: {}", kdcClass);
 
         // 2. 기존 추천 결과 삭제 (재계산 대비)
-        illRecommendationRepository.deleteByBook_BookId(managedBook.getBookId());
+        illRecommendationRepository.deleteByBook_BookId(book.getBookId());
 
         // 3. 후보 도서관 목록 (출발 도서관 제외)
         List<Library> allCandidates = libraryRepository.findAllByLibraryIdNot(originLib.getLibraryId());
+        log.info("📋 전체 후보 도서관 수: {}개", allCandidates.size());
+
+        if (allCandidates.isEmpty()) {
+            log.warn("⚠ 후보 도서관이 0개 → 추천 생략");
+            return;
+        }
 
         // 4. Haversine 사전 필터 (API 호출 횟수 최소화)
         List<Library> preFiltered = allCandidates.stream()
@@ -102,17 +114,32 @@ public class IllRecommendationService {
 
         log.info("📍 Haversine 사전 필터: 전체 {}개 → 후보 {}개", allCandidates.size(), preFiltered.size());
 
+        if (preFiltered.isEmpty()) {
+            log.warn("⚠ Haversine 사전 필터 후 후보 0개 → 추천 생략. 출발 도서관={}", originLib.getLibraryName());
+            return;
+        }
+
         // 5. 각 후보에 대해 4대 지표 계산
         List<ScoredCandidate> scoredList = new ArrayList<>();
+        int distanceFilteredOut = 0;
 
         for (Library dest : preFiltered) {
             // ── 거리 계산 (카카오 API → Haversine 폴백) ──
-            double distKm = kakaoDistanceClient.getDistanceKm(
-                    originLib.getLatitude(), originLib.getLongitude(),
-                    dest.getLatitude(), dest.getLongitude());
+            double distKm;
+            try {
+                distKm = kakaoDistanceClient.getDistanceKm(
+                        originLib.getLatitude(), originLib.getLongitude(),
+                        dest.getLatitude(), dest.getLongitude());
+            } catch (Exception e) {
+                log.warn("⚠ 거리 계산 실패 (dest={}): {}", dest.getLibraryName(), e.getMessage());
+                continue;
+            }
 
             // 하드 필터: 15km 초과 시 제외
-            if (distKm > MAX_DISTANCE_KM) continue;
+            if (distKm > MAX_DISTANCE_KM) {
+                distanceFilteredOut++;
+                continue;
+            }
 
             // ① 거리 감쇄 점수 (F_dist)
             double fDist = 1.0 / (1.0 + Math.exp(SIGMOID_ALPHA * (distKm - SIGMOID_D_MAX)));
@@ -132,6 +159,13 @@ public class IllRecommendationService {
             scoredList.add(new ScoredCandidate(dest, distKm, fDist, sDemand, sGap, sSpace, totalScore));
         }
 
+        log.info("📊 거리 하드필터 제외: {}개, 최종 후보: {}개", distanceFilteredOut, scoredList.size());
+
+        if (scoredList.isEmpty()) {
+            log.warn("⚠ 모든 후보가 거리 필터({}km)에 의해 제외됨 → 추천 0건", MAX_DISTANCE_KM);
+            return;
+        }
+
         // 6. 점수 내림차순 정렬 → 상위 5개 저장
         scoredList.sort(Comparator.comparingDouble(ScoredCandidate::totalScore).reversed());
 
@@ -141,7 +175,7 @@ public class IllRecommendationService {
 
             IllRecommendation rec = IllRecommendation.builder()
                     .uscoreResult(uscore)
-                    .book(managedBook)
+                    .book(book)
                     .originLibrary(originLib)
                     .destLibrary(sc.library())
                     .rank((byte) (i + 1))
@@ -155,9 +189,10 @@ public class IllRecommendationService {
                     .build();
 
             illRecommendationRepository.save(rec);
+            log.info("💾 추천 저장: rank={}, dest={}, score={}", i + 1, sc.library().getLibraryName(), toBD(sc.totalScore()));
         }
 
-        log.info("✅ 추천 완료: bookId={}, 추천 도서관 {}개 저장", managedBook.getBookId(), saveCount);
+        log.info("✅ 추천 완료: bookId={}, 추천 도서관 {}개 저장", book.getBookId(), saveCount);
     }
 
     // ──────────────────────────────────────────────────
