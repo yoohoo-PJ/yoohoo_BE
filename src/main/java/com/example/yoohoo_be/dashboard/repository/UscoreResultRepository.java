@@ -24,6 +24,23 @@ public interface UscoreResultRepository extends JpaRepository<UscoreResult, Long
            "AND u.inspectionStatus = 'UNINSPECTED'")
     org.springframework.data.domain.Page<UscoreResult> findDamagePendingPage(org.springframework.data.domain.Pageable pageable);
 
+    @Query(value = "SELECT u FROM UscoreResult u " +
+           "JOIN FETCH u.book b " +
+           "WHERE u.isIdle = true " +
+           "AND u.inspectionStatus = 'UNINSPECTED' " +
+           "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR b.isbn LIKE CONCAT('%', :keyword, '%')) " +
+           "AND (:kdcPrefix IS NULL OR b.kdcClass LIKE CONCAT(:kdcPrefix, '%'))",
+           countQuery = "SELECT COUNT(u) FROM UscoreResult u " +
+           "JOIN u.book b " +
+           "WHERE u.isIdle = true " +
+           "AND u.inspectionStatus = 'UNINSPECTED' " +
+           "AND (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR b.isbn LIKE CONCAT('%', :keyword, '%')) " +
+           "AND (:kdcPrefix IS NULL OR b.kdcClass LIKE CONCAT(:kdcPrefix, '%'))")
+    org.springframework.data.domain.Page<UscoreResult> findDamagePendingWithFilters(
+            @Param("keyword") String keyword, 
+            @Param("kdcPrefix") String kdcPrefix, 
+            org.springframework.data.domain.Pageable pageable);
+
     @Query("SELECT COUNT(u) FROM UscoreResult u " +
            "WHERE u.isIdle = true " +
            "AND u.inspectionStatus = 'UNINSPECTED' " +
