@@ -52,6 +52,9 @@ public class BookCheckService {
      */
     @Transactional
     public BookCheckBatch createBookCheckResult(BookCheckSaveRequestDto requestDto) {
+        if (requestDto.getResultId() == null) {
+            throw new InvalidRequestException("점검 대상 도서 ID(resultId)는 필수 값입니다.");
+        }
         UscoreResult uscore = uscoreResultRepository.findById(requestDto.getResultId().longValue())
                 .orElseThrow(() -> new ResourceNotFoundException("해당 유휴도서 결과를 찾을 수 없습니다. resultId=" + requestDto.getResultId()));
         Book book = uscore.getBook();

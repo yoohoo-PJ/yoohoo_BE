@@ -13,8 +13,10 @@ import java.util.List;
 @NoArgsConstructor
 public class BookCheckSaveRequestDto {
 
-    @NotNull(message = "점검 대상 도서 ID(resultId)는 필수 값입니다.")
-    private Integer resultId; // 점검 대상 도서 ID (이전 bookId)
+    // 등록(POST)에서만 필요한 값 (UscoreResult 조회용). 수정(PUT)은 resultBatchId로 대상을 특정하므로
+    // 이 값을 쓰지 않는다 — 그래서 등록/수정 공용 DTO인 이 클래스에는 @NotNull을 걸지 않고,
+    // 실제로 필요한 BookCheckService#createBookCheckResult에서만 null 체크한다.
+    private Integer resultId; // 점검 대상 UscoreResult ID (구 필드명은 bookId였음)
 
     private Integer bookId; // 새로 추가된 실제 bookId
 
