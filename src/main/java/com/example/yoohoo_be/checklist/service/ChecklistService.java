@@ -95,7 +95,7 @@ public class ChecklistService {
             Thread.currentThread().interrupt();
         }
 
-        int newlyClassifiedCount = uscoreResultRepository.executeIdleClassificationAlgorithm(origin.getLibraryId(), 15.0, LocalDate.now());
+        int newlyClassifiedCount = uscoreResultRepository.executeIdleClassificationAlgorithm(origin.getLibraryId(), 60.0, LocalDate.now());
 
         uscoreResultRepository.updateCalcDateForIdleBooks(origin.getLibraryId(), LocalDate.now());
 
