@@ -174,8 +174,8 @@ public class BookCheckService {
             try {
                 illRecommendationService.generateRecommendations(batch.getBook());
             } catch (Exception e) {
-                log.warn("⚠ 상호대차 추천 알고리즘 실행 실패 (bookId={}): {}",
-                        batch.getBook().getBookId(), e.getMessage());
+                log.error("⚠ 상호대차 추천 알고리즘 실행 실패 (bookId={}): {}",
+                        batch.getBook().getBookId(), e.getMessage(), e);
             }
         }
 
@@ -220,8 +220,8 @@ public class BookCheckService {
                         try {
                             illRecommendationService.generateRecommendations(batch.getBook());
                         } catch (Exception e) {
-                            log.warn("⚠ 일괄 이관 추천 알고리즘 실행 실패 (bookId={}): {}",
-                                    batch.getBook().getBookId(), e.getMessage());
+                            log.error("⚠ 일괄 이관 추천 알고리즘 실행 실패 (bookId={}): {}",
+                                    batch.getBook().getBookId(), e.getMessage(), e);
                         }
                     }
 
