@@ -5,6 +5,7 @@ import com.example.yoohoo_be.dashboard.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -57,7 +58,7 @@ public class IllRecommendationService {
      *
      * @param book 이관 대상 도서
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void generateRecommendations(Book book) {
         // 1. UscoreResult 조회 → 출발 도서관(origin) 확인
         Optional<UscoreResult> uscoreOpt = uscoreResultRepository.findByBookBookId(book.getBookId());
