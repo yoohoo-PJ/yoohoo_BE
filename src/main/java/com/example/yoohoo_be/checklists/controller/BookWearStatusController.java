@@ -2,6 +2,7 @@ package com.example.yoohoo_be.checklists.controller;
 
 import com.example.yoohoo_be.dashboard.domain.BookStatus;
 import com.example.yoohoo_be.checklists.dto.BookCheckCompletedListResponseDto;
+import com.example.yoohoo_be.checklists.dto.BookMonthlyLoanPointDto;
 import com.example.yoohoo_be.checklists.dto.BookSummaryResponseDto;
 import com.example.yoohoo_be.checklists.dto.BookWearStatusDetailResponseDto;
 import com.example.yoohoo_be.checklists.dto.DiscardedBookListResponseDto;
@@ -74,6 +75,22 @@ public class BookWearStatusController {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "SUCCESS");
         response.put("message", "폐기 도서 목록 및 연간 폐기 상한 현황을 조회했습니다.");
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 6. [신규] 특정 도서의 최근 12개월 월별 대출 추이 조회 ("유휴 도서 처리 목록" 상세 패널 차트용)
+     * [GET] /api/checklists/books/{bookId}/loans/monthly
+     */
+    @GetMapping("/books/{bookId}/loans/monthly")
+    public ResponseEntity<Map<String, Object>> getMonthlyLoanTrend(@PathVariable("bookId") Integer bookId) {
+        List<BookMonthlyLoanPointDto> data = bookWearStatusService.getMonthlyLoanTrend(bookId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "도서 월별 대출 추이를 조회했습니다.");
         response.put("data", data);
 
         return ResponseEntity.ok(response);
