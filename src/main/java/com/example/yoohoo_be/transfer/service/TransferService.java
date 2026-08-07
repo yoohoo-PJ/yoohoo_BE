@@ -71,6 +71,12 @@ public class TransferService {
                     .matchingScore(alt.getMatchingScore())
                     .direction(getDirection(alt, myLibraryId))
                     .status(alt.getTransferStatus().name())
+                    .scoreDetails(TransferResponseDto.ScoreDetails.builder()
+                            .distanceDecay(alt.getFDist())
+                            .bookDemand(alt.getSDemand())
+                            .shortageResolution(alt.getSGap())
+                            .spaceEfficiency(alt.getSSpace())
+                            .build())
                     .build()).collect(Collectors.toList());
 
             return TransferResponseDto.builder()
