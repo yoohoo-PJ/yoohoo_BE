@@ -16,4 +16,5 @@ public class TransferAlternativeDto {
     private BigDecimal matchingScore;
     private String direction;
     private String status;
+    private TransferResponseDto.ScoreDetails scoreDetails;
 }
